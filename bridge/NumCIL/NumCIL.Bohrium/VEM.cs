@@ -303,7 +303,7 @@ namespace NumCIL.Bohrium
             try
             {
                 lock (m_executelock)
-                    ExecuteWithoutLocks(lst, out errorIndex);
+                    ExecuteWithoutLocks(lst, out errorIndex, false);
             }
             catch
             {
@@ -355,7 +355,7 @@ namespace NumCIL.Bohrium
                 try
                 {
                     lock (m_executelock)
-                        ExecuteWithoutLocks(lst, out errorIndex);
+                        ExecuteWithoutLocks(lst, out errorIndex, true);
                 }
                 catch
                 {
@@ -370,44 +370,22 @@ namespace NumCIL.Bohrium
         }
 
         /// <summary>
-        /// Reshuffles instructions to honor Bohrium rules
-        /// </summary>
-        /// <param name="list">The list of instructions to reshuffle</param>
-        private void ReshuffleInstructions(PInvoke.bh_instruction[] list)
-        {
-            if (list.LongLength <= 1)
-                return;
-
-            long lastIx = list.LongLength;
-            for(long i = 0; i < lastIx; i++)
-            {
-                var inst = list[i];
-                if (inst.opcode == bh_opcode.BH_DISCARD && inst.operand0.BaseArray == PInvoke.bh_array_ptr.Null)
-                {
-                    Console.WriteLine("Shuffling list, i: {0}, inst: {1}, lastIx: {2}", i, inst, lastIx);
-                    lastIx--;
-                    var tmp = list[lastIx];
-                    list[lastIx] = inst;
-                    list[i] = tmp;
-                }
-            }
-        }
-
-        /// <summary>
         /// Internal execution handler, runs without locking of any kind
         /// </summary>
         /// <param name="instList">The list of instructions to execute</param>
         /// <param name="errorIndex">A return value for the instruction that caused an error</param>
-        private void ExecuteWithoutLocks(IEnumerable<IInstruction> instList, out long errorIndex)
+        private void ExecuteWithoutLocks(IEnumerable<IInstruction> instList, out long errorIndex, bool onlyClean)
         {
-            var cleanups = new List<GCHandle>();
+			var cleanups = new List<GCHandle>();
             long destroys = 0;
             errorIndex = -1;
 
             try
             {
-                PInvoke.bh_instruction[] instrBuffer = instList.Select(x => (PInvoke.bh_instruction)x).ToArray();
-                //ReshuffleInstructions(instrBuffer);
+                PInvoke.bh_instruction[] instrBuffer = instList.Cast<PInvoke.bh_instruction>().ToArray();
+				Console.WriteLine("Executing without locks {0}", instrBuffer.Length);
+				if (!onlyClean)
+					instrBuffer = DependencyBuilder.ReorganizeInstructions(instrBuffer);                
 
                 foreach (var inst in instrBuffer)
                 {
