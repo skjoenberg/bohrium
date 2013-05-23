@@ -279,42 +279,6 @@ namespace NumCIL.Bohrium
 #endif
 		}
 		
-		/*private static PInvoke.bh_instruction[] LowPassDiscardFixer(PInvoke.bh_instruction[] instructions)
-		{
-			var bases = new Dictionary<long, long>();
-			for(var i = 0; i < instructions.Length; i++)
-			{
-				if (instructions[i].opcode == bh_opcode.BH_DISCARD)
-				{
-					var pid = GetArrayID(instructions[i].operand0);
-					if (instructions[i].operand0.BaseArray == PInvoke.bh_array_ptr.Null)
-					{
-						//Console.WriteLine("Base is {0}: {1}", i,pid);
-						bases[pid] = i;
-					}
-					else
-					{
-						//Console.WriteLine("View is {0}: {1} -> {2}", i, instructions[i].operand0.PtrValue, pid);
-						long ix;
-						if (bases.TryGetValue(pid, out ix))
-						{
-							Console.WriteLine("Low-pass swapping");
-							
-							var n = instructions[ix];
-							instructions[ix] = instructions[i];
-							instructions[i] = n;
-							bases[pid] = i;
-						}
-					}
-						
-				}
-			}
-		
-			return
-			 instructions;
-		}*/
-		
-		
 		/// <summary>
 		/// Gets the array ID.
 		/// </summary>
