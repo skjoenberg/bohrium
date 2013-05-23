@@ -44,7 +44,7 @@ char* snippet_path;
 
 process* target;
 
-void bh_string_option(char *option, const char *env_name, const char *conf_name)
+void bh_string_option(char *&option, const char *env_name, const char *conf_name)
 {
     option = getenv(env_name);           // For the compiler
     if (NULL==option) {
@@ -58,7 +58,7 @@ void bh_string_option(char *option, const char *env_name, const char *conf_name)
     }
 }
 
-void bh_path_option(char *option, const char *env_name, const char *conf_name)
+void bh_path_option(char *&option, const char *env_name, const char *conf_name)
 {
     option = getenv(env_name);           // For the compiler
     if (NULL==option) {
@@ -79,7 +79,6 @@ void bh_path_option(char *option, const char *env_name, const char *conf_name)
             sprintf(err_msg, "Err: Path is broken somehow; path (%s).\n", option);
         }
         throw std::runtime_error(err_msg);
-
     }
 }
 
@@ -99,19 +98,14 @@ bh_error bh_ve_dynamite_init(bh_component *self)
     bh_vcache_init( vcache_size );
 
     // DYNAMITE Arguments
-    bh_string_option(compiler_cmd,
-                     "BH_VE_DYNAMITE_TARGET",       "compiler_cmd");
-    bh_path_option(kernel_path,
-                     "BH_VE_DYNAMITE_KERNEL_PATH",  "kernel_path");
-    bh_path_option(object_path,
-                     "BH_VE_DYNAMITE_OBJECT_PATH",  "object_path");
-    bh_path_option(snippet_path,
-                     "BH_VE_DYNAMITE_SNIPPET_PATH", "snippet_path");
-
-    std::cout << "Options{compiler_cmd=" << compiler_cmd \
-              << ",kernel_path=" << kernel_path \
-              << ",object_path=" << object_path \
-              << ",snippet_path=" << snippet_path << std::endl;
+    bh_path_option(
+        kernel_path,    "BH_VE_DYNAMITE_KERNEL_PATH",   "kernel_path");
+    bh_path_option(
+        object_path,    "BH_VE_DYNAMITE_OBJECT_PATH",   "object_path");
+    bh_path_option(
+        snippet_path,   "BH_VE_DYNAMITE_SNIPPET_PATH",  "snippet_path");
+    bh_string_option(
+        compiler_cmd,   "BH_VE_DYNAMITE_TARGET",        "compiler_cmd");
 
     target = new process(compiler_cmd, object_path, kernel_path);
 
@@ -133,7 +127,8 @@ bh_error bh_ve_dynamite_execute(bh_intp instruction_count, bh_instruction* instr
         char type_out[50], /// TODO: THESE WILL COME BACK AND HAUNT YOU!
              type_in1[50],
              type_in2[50],
-             operator_src[100];
+             operator_src[100],
+             snippet_fn[250];
         char *opcode_txt;
 
         std::string symbol = "";
@@ -180,10 +175,10 @@ bh_error bh_ve_dynamite_execute(bh_intp instruction_count, bh_instruction* instr
                         dict.SetValue("SYMBOL",     symbol);
                         dict.SetValue("TYPE_A0",    type_out);
                         dict.SetValue("TYPE_A0_SHORTHAND", bhtype_to_shorthand(random_args->operand[0]->type));
-
+                        sprintf(snippet_fn, "%s/random.tpl", snippet_path);
                         ctemplate::ExpandTemplate(
-                            "snippets/random.tpl",
-                            ctemplate::DO_NOT_STRIP, 
+                            snippet_fn,
+                            ctemplate::STRIP_BLANK_LINES, 
                             &dict, 
                             &sourcecode
                         );
@@ -239,7 +234,13 @@ bh_error bh_ve_dynamite_execute(bh_intp instruction_count, bh_instruction* instr
                     dict.SetValue("TYPE_A0", type_out);
                     dict.SetValue("TYPE_A1", type_in1);
 
-                    ctemplate::ExpandTemplate("snippets/reduction.tpl", ctemplate::DO_NOT_STRIP, &dict, &sourcecode);
+                    sprintf(snippet_fn, "%s/reduction.tpl", snippet_path);
+                    ctemplate::ExpandTemplate(
+                        snippet_fn,
+                        ctemplate::STRIP_BLANK_LINES,
+                        &dict,
+                        &sourcecode
+                    );
                     cres = target->compile(symbol, sourcecode.c_str(), sourcecode.size());
                 }
 
@@ -357,7 +358,13 @@ bh_error bh_ve_dynamite_execute(bh_intp instruction_count, bh_instruction* instr
                     dict.ShowSection("a2_dense");
                 }
             
-                ctemplate::ExpandTemplate("snippets/traverse.tpl", ctemplate::DO_NOT_STRIP, &dict, &sourcecode);
+                sprintf(snippet_fn, "%s/traverse.tpl", snippet_path);
+                ctemplate::ExpandTemplate(
+                    snippet_fn,
+                    ctemplate::STRIP_BLANK_LINES,
+                    &dict,
+                    &sourcecode
+                );
                 cres = target->compile(symbol, sourcecode.c_str(), sourcecode.size());
 
                 if (cres) {
@@ -471,7 +478,13 @@ bh_error bh_ve_dynamite_execute(bh_intp instruction_count, bh_instruction* instr
                     dict.ShowSection("a1_dense");
                 } 
 
-                ctemplate::ExpandTemplate("snippets/traverse.tpl", ctemplate::DO_NOT_STRIP, &dict, &sourcecode);
+                sprintf(snippet_fn, "%s/traverse.tpl", snippet_path);
+                ctemplate::ExpandTemplate(
+                    snippet_fn,
+                    ctemplate::STRIP_BLANK_LINES,
+                    &dict,
+                    &sourcecode
+                );
                 cres = target->compile(symbol, sourcecode.c_str(), sourcecode.size());
 
                 if (!cres) {
