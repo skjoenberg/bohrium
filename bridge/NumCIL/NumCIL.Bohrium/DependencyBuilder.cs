@@ -346,14 +346,11 @@ namespace NumCIL.Bohrium
 		/// <param name="attachDiscards">If set to <c>true</c> attaches discards nodes.</param>
 		private static IEnumerable<Node> BuildGraph(IEnumerable<PInvoke.bh_instruction> instructions, bool injectFences, bool attachDiscards)
 		{
-			var res = new List<Node>();
 			var map = new Dictionary<long, Node>();
 			var roots = new List<Node>();
 			var readMap = new Dictionary<long, Node>();
 			var writeMap = new Dictionary<long, Node>();
-			var discards = new List<Node>();
 			var instrCount = 0L;
-			
 			
 			foreach (var i in instructions)
 			{
@@ -385,7 +382,56 @@ namespace NumCIL.Bohrium
 				if (i.opcode == bh_opcode.BH_DISCARD || i.opcode == bh_opcode.BH_SYNC)
 				{
 					if (attachDiscards)
-						discards.Add(selfNode);
+					{
+						var exploration = new Queue<Node>();
+						Node cur;
+						map.TryGetValue(GetArrayID(selfNode.Instruction.operand0), out cur);
+						
+						map[GetArrayID(selfNode.Instruction.operand0)] = selfNode;
+						
+						if (cur == null)
+						{
+							roots.Add(selfNode);
+						}
+						else
+						{
+							if (cur.LeftChild != null)
+							{
+								cur = cur.LeftChild;
+								if (cur.RightChild != null)
+									exploration.Enqueue(cur.RightChild);
+							}
+							else if (cur.RightChild != null)
+								cur = cur.RightChild;
+							
+							while (cur != null)
+							{
+								if (cur.Type == NodeType.Instruction)
+								{
+									cur.AppendChild(selfNode);
+									if (exploration.Count > 0)
+										cur = exploration.Dequeue();
+									else
+										cur = null;
+								}
+								else
+								{
+									if (cur.LeftChild != null)
+									{
+										cur = cur.LeftChild;
+										if (cur.RightChild != null)
+											exploration.Enqueue(cur.RightChild);
+									}
+									else if (cur.RightChild != null)
+										cur = cur.RightChild;
+									else if (exploration.Count > 0)
+										cur = exploration.Dequeue();
+									else
+										cur = null;
+								}
+							}
+						}
+					}
 				}
 				else
 				{				
@@ -413,79 +459,10 @@ namespace NumCIL.Bohrium
 					if (leftDep == null && rightDep == null && oldTarget == null)
 						roots.Add(selfNode);
 	
-					res.Add(selfNode);
 					if (injectFences)
 						InjectFence(selfNode, readMap, writeMap);
 				}
 			}
-			
-			Func<Node, Node> injectDiscard = (d) =>
-			{
-				var exploration = new Queue<Node>();
-				Node cur;
-				map.TryGetValue(GetArrayID(d.Instruction.operand0), out cur);
-				
-				map[GetArrayID(d.Instruction.operand0)] = d;
-				
-				if (cur == null)
-				{
-					return d;
-				}
-				else
-				{
-					if (cur.LeftChild != null)
-					{
-						cur = cur.LeftChild;
-						if (cur.RightChild != null)
-							exploration.Enqueue(cur.RightChild);
-					}
-					else if (cur.RightChild != null)
-						cur = cur.RightChild;
-					
-					while (cur != null)
-					{
-						if (cur.Type == NodeType.Instruction)
-						{
-							cur.AppendChild(d);
-							if (exploration.Count > 0)
-								cur = exploration.Dequeue();
-							else
-								cur = null;
-						}
-						else
-						{
-							if (cur.LeftChild != null)
-							{
-								cur = cur.LeftChild;
-								if (cur.RightChild != null)
-									exploration.Enqueue(cur.RightChild);
-							}
-							else if (cur.RightChild != null)
-								cur = cur.RightChild;
-							else if (exploration.Count > 0)
-								cur = exploration.Dequeue();
-							else
-								cur = null;
-						}
-					}
-					
-					return null;
-				}
-			};
-			
-			//Attach all views
-			foreach (var d in discards.Where(x => x.Instruction.opcode == bh_opcode.BH_DISCARD && x.Instruction.operand0.BaseArray != PInvoke.bh_array_ptr.Null))
-				if (injectDiscard(d) != null)
-					roots.Add(d);
-
-			//Attach all bases
-			foreach (var d in discards.Where(x => x.Instruction.opcode == bh_opcode.BH_DISCARD && x.Instruction.operand0.BaseArray == PInvoke.bh_array_ptr.Null))
-				if (injectDiscard(d) != null)
-					roots.Add(d);
-			
-			foreach (var d in discards.Where(x => x.Instruction.opcode == bh_opcode.BH_SYNC))
-				if (injectDiscard(d) != null)
-					roots.Add(d);
 			
 			return roots;
 		}
