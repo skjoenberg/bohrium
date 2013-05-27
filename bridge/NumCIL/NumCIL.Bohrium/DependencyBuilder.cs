@@ -274,7 +274,10 @@ namespace NumCIL.Bohrium
 			return serialized.ToArray();
 #else
 			var roots = BuildGraph(instructions, true, true);
-			return Serialize(roots).ToArray();
+			if (roots == null)
+				return instructions;
+			else
+				return Serialize(roots).ToArray();
 #endif
 		}
 		
