@@ -1,5 +1,5 @@
 /*
-This file is part of cphVB and copyright (c) 2012 the cphVB team:
+This file is part of Bohrium and copyright (c) 2012 the Bohrium team:
 http://bohrium.bitbucket.org
 
 Bohrium is free software: you can redistribute it and/or modify
@@ -199,6 +199,8 @@ public:
     size_t len();
     multi_array<T>& copy();                 // Explicity create a copy of array
     multi_array<T>& flatten();              // Create a flat copy of the array
+
+    multi_array<T>& update(multi_array& rhs); // Fill the array with values from another.
 
     multi_array<T>& transpose();
     
