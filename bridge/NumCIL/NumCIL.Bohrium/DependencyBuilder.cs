@@ -117,7 +117,7 @@ namespace NumCIL.Bohrium
 					else if (cn.LeftChild.P2 == this)
 						cn.LeftChild.P2 = cn;
 					else
-						throw new Exception("Bad tree");					
+						throw new Exception("Bad graph");					
 						
 					newchild.AppendParent(cn);
 					cn.P1 = this;
@@ -187,7 +187,7 @@ namespace NumCIL.Bohrium
 					else if (cur.P1.RightChild == cur)
 						cur.P1.RightChild = this;
 					else
-						throw new Exception("Bad tree");
+						throw new Exception("Bad graph");
 					
 					this.P1 = cur.P1;
 				}
@@ -199,7 +199,7 @@ namespace NumCIL.Bohrium
 					else if (cur.P2.RightChild == cur)
 						cur.P2.RightChild = this;
 					else
-						throw new Exception("Bad tree");
+						throw new Exception("Bad graph");
 					
 					this.P2 = cur.P2;
 				}
@@ -225,23 +225,22 @@ namespace NumCIL.Bohrium
 		{
 #if DEBUG		
 			var filename = FILENAMECOUNT++;
-			
-			PrintTree(instructions, "from-list-" + filename + ".dot");
+			PrintGraph(instructions, "from-list-" + filename + ".dot");
 
 			var bareroots = BuildGraph(instructions, false, false).ToList();
-			PrintTree(bareroots, "bare-tree-" + filename + ".dot");
+			PrintGraph(bareroots, "bare-tree-" + filename + ".dot");
 
 			var discroots = BuildGraph(instructions, false, true).ToList();
-			PrintTree(discroots, "bare-discard-tree-" + filename + ".dot");
+			PrintGraph(discroots, "bare-discard-tree-" + filename + ".dot");
 			
 			var fencedroots = BuildGraph(instructions, true, false).ToList();
-			PrintTree(fencedroots, "fenced-tree-" + filename + ".dot");
+			PrintGraph(fencedroots, "fenced-tree-" + filename + ".dot");
 
 			var fenceddiscroots = BuildGraph(instructions, true, true).ToList();
-			PrintTree(fenceddiscroots, "fenced-discard-tree-" + filename + ".dot");
+			PrintGraph(fenceddiscroots, "fenced-discard-tree-" + filename + ".dot");
 			
 			var serialized = Serialize(fenceddiscroots);
-			PrintTree(serialized, "serialized-list-" + filename + ".dot");
+			PrintGraph(serialized, "serialized-list-" + filename + ".dot");
 						
 			/*foreach (var n in serialized)
 				Console.WriteLine("Actual instr: {0}", n);*/
@@ -573,11 +572,11 @@ namespace NumCIL.Bohrium
 		}
 		
 		/// <summary>
-		/// Prints the tree in DOT format
+		/// Prints the graph in DOT format
 		/// </summary>
 		/// <param name="roots">List of graph roots</param>
 		/// <param name="file">The file to write to</param>
-		private static void PrintTree(IEnumerable<Node> roots, string file)
+		private static void PrintGraph(IEnumerable<Node> roots, string file)
 		{
 			var duplicateRemover = new Dictionary<string, string>();
 			using (var fs = new System.IO.StreamWriter(file, false, System.Text.Encoding.UTF8))
@@ -672,11 +671,11 @@ namespace NumCIL.Bohrium
 		}
 		
 		/// <summary>
-		/// Prints the tree in DOT format
+		/// Prints the graph in DOT format
 		/// </summary>
 		/// <param name="insts">List of instructions</param>
 		/// <param name="file">The file to write to</param>
-		private static void PrintTree(IEnumerable<PInvoke.bh_instruction> insts, string file)
+		private static void PrintGraph(IEnumerable<PInvoke.bh_instruction> insts, string file)
 		{
 			var baseNameDict = new Dictionary<long, string>();
 			var instrNameDict = new Dictionary<PInvoke.bh_instruction, string>();
