@@ -38,7 +38,7 @@ namespace bohrium {
 
 static boost::hash<string> hasher;
 
-EngineOpenMP::EngineOpenMP(const ConfigParser &config, jitk::Statistics &stat) :
+EngineFortran::EngineFortran(const ConfigParser &config, jitk::Statistics &stat) :
                                            verbose(config.defaultGet<bool>("verbose", false)),
                                            tmp_dir(jitk::get_tmp_path(config)),
                                            tmp_src_dir(tmp_dir / "src"),
@@ -56,7 +56,7 @@ EngineOpenMP::EngineOpenMP(const ConfigParser &config, jitk::Statistics &stat) :
     }
 }
 
-EngineOpenMP::~EngineOpenMP() {
+EngineFortran::~EngineFortran() {
 
     // Move JIT kernels to the cache dir
     if (not cache_bin_dir.empty()) {
@@ -78,20 +78,20 @@ EngineOpenMP::~EngineOpenMP() {
     }
 
     // If this cleanup is enabled, the application segfaults
-    // on destruction of the EngineOpenMP class.
+    // on destruction of the EngineFortran class.
     //
-    // The reason for that is that OpenMP currently has no
+    // The reason for that is that Fortran currently has no
     // means in the definition of the standard to do a proper
     // cleanup and hence internally does something funny.
-    // See https://stackoverflow.com/questions/5200418/destroying-threads-in-openmp-c
+    // See https://stackoverflow.com/questions/5200418/destroying-threads-in-fortran-c
     // for details.
     //
     // TODO A more sensible way to get around this issue
-    //      would be to also dlopen the openmp library
+    //      would be to also dlopen the fortran library
     //      itself and therefore increase our reference count
     //      to it. This enables the kernel so files to be unlinked
     //      and cleaned up, but prevents the problematic code on
-    //      openmp cleanup to be triggered at bohrium runtime.
+    //      fortran cleanup to be triggered at bohrium runtime.
 
     // for(void *handle: _lib_handles) {
     //     dlerror(); // Reset errors
@@ -101,7 +101,7 @@ EngineOpenMP::~EngineOpenMP() {
     // }
 }
 
-KernelFunction EngineOpenMP::getFunction(const string &source) {
+KernelFunction EngineFortran::getFunction(const string &source) {
     size_t hash = hasher(source);
     ++stat.kernel_cache_lookups;
 
@@ -136,7 +136,7 @@ KernelFunction EngineOpenMP::getFunction(const string &source) {
     void *lib_handle = dlopen(binfile.string().c_str(), RTLD_NOW);
     if (lib_handle == nullptr) {
         cerr << "Cannot load library: " << dlerror() << endl;
-        throw runtime_error("VE-OPENMP: Cannot load library");
+        throw runtime_error("VE-FORTRAN: Cannot load library");
     }
     _lib_handles.push_back(lib_handle);
 
@@ -148,13 +148,13 @@ KernelFunction EngineOpenMP::getFunction(const string &source) {
     const char* dlsym_error = dlerror();
     if (dlsym_error != nullptr) {
         cerr << "Cannot load function launcher(): " << dlsym_error << endl;
-        throw runtime_error("VE-OPENMP: Cannot load function launcher()");
+        throw runtime_error("VE-FORTRAN: Cannot load function launcher()");
     }
     return _functions.at(hash);
 }
 
 
-void EngineOpenMP::execute(const std::string &source, const std::vector<bh_base*> &non_temps,
+void EngineFortran::execute(const std::string &source, const std::vector<bh_base*> &non_temps,
                            const std::vector<const bh_view*> &offset_strides,
                            const std::vector<const bh_instruction*> &constants) {
 
@@ -203,16 +203,16 @@ void EngineOpenMP::execute(const std::string &source, const std::vector<bh_base*
 
 }
 
-void EngineOpenMP::set_constructor_flag(std::vector<bh_instruction*> &instr_list) {
+void EngineFortran::set_constructor_flag(std::vector<bh_instruction*> &instr_list) {
     const std::set<bh_base*> empty;
     jitk::util_set_constructor_flag(instr_list, empty);
 }
 
 
-std::string EngineOpenMP::info() const {
+std::string EngineFortran::info() const {
     stringstream ss;
     ss << "----"                                                           << "\n";
-    ss << "OpenMP:"                                                        << "\n";
+    ss << "Fortran:"                                                        << "\n";
     ss << "  Hardware threads: " << std::thread::hardware_concurrency()    << "\n";
     ss << "  JIT Command: \"" << compiler.cmd_template << "\"\n";
     return ss.str();

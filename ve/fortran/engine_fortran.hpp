@@ -36,7 +36,7 @@ namespace bohrium {
 
 typedef void (*KernelFunction)(void* data_list[], uint64_t offset_strides[], bh_constant_value constants[]);
 
-class EngineOpenMP {
+class EngineFortran {
   private:
     std::map<uint64_t, KernelFunction> _functions;
     std::vector<void*> _lib_handles;
@@ -69,8 +69,8 @@ class EngineOpenMP {
     KernelFunction getFunction(const std::string &source);
 
   public:
-    EngineOpenMP(const ConfigParser &config, jitk::Statistics &stat);
-    ~EngineOpenMP();
+    EngineFortran(const ConfigParser &config, jitk::Statistics &stat);
+    ~EngineFortran();
 
     // The following methods implements the methods required by jitk::handle_cpu_execution()
 
