@@ -242,8 +242,8 @@ void write_loop_block(const SymbolTable &symbols,
             if (not scope.isDeclared(output) and not scope.isArray(output)) {
                 // Let's write the declaration of the scalar variable
                 scope.writeDeclaration(output, type_writer(output.base->type), declares);
-                out << "\n";
-                spaces(out, 4 + block.rank * 4);
+                declares << "\n";
+                spaces(declares, 4 + block.rank * 4);
             }
         }
     }
@@ -283,8 +283,8 @@ void write_loop_block(const SymbolTable &symbols,
             const bh_view &view = instr->operand[0];
             if (not scope.isArray(view) and not scope.isDeclared(view)) {
                 scope.writeDeclaration(view, type_writer(view.base->type), declares);
-                out << "\n";
-                spaces(out, 4 + block.rank * 4);
+                declares << "\n";
+                spaces(declares, 4 + block.rank * 4);
             }
             scope.getName(view, out);
             out << " = ";
@@ -367,7 +367,9 @@ void write_loop_block(const SymbolTable &symbols,
             }
         }
         spaces(out, 4 + block.rank*4);
-        if (not fortran) {
+        if (fortran) {
+            out << "END DO";
+        } else {
             out << "}";
         }
         out << "\n";
@@ -384,7 +386,7 @@ void write_loop_block(const SymbolTable &symbols,
                 if (scope.isTmp(view->base)) {
                     spaces(out, 8 + block.rank * 4);
                     scope.writeDeclaration(*view, type_writer(view->base->type), declares);
-                    out << "\n";
+                    declares << "\n";
                 } else if (scope.isScalarReplaced_R(*view)) {
                     spaces(out, 8 + block.rank * 4);
                     scope.writeDeclaration(*view, type_writer(view->base->type), declares);
@@ -401,7 +403,7 @@ void write_loop_block(const SymbolTable &symbols,
         if (not scope.isIdxDeclared(*view)) {
             spaces(out, 8 + block.rank * 4);
             scope.writeIdxDeclaration(*view, type_writer(bh_type::UINT64), declares);
-            out << "\n";
+            declares << "\n";
         }
     }
 
@@ -443,7 +445,9 @@ void write_loop_block(const SymbolTable &symbols,
         }
     }
     spaces(out, 4 + block.rank*4);
-    if (not fortran) {
+    if (fortran) {
+        out << "END DO";
+    } else {
         out << "}";
     }
     out << "\n";
