@@ -53,7 +53,7 @@ class Impl : public ComponentImpl {
     // Fuse cache
     FuseCache fcache;
     // Teh OpenMP engine
-    EngineOpenMP engine;
+    EngineFortran engine;
     // Known extension methods
     map<bh_opcode, extmethod::ExtmethodFace> extmethods;
     //Allocated base arrays
@@ -146,7 +146,7 @@ Impl::~Impl() {
 }
 
 // Writing the OpenMP header, which include "parallel for" and "simd"
-void write_openmp_header(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config, stringstream &out) {
+void write_fortran_header(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config, stringstream &out) {
     if (not config.defaultGet<bool>("compiler_openmp", false)) {
         return;
     }
@@ -155,11 +155,12 @@ void write_openmp_header(const SymbolTable &symbols, Scope &scope, const LoopB &
     // All reductions that can be handle directly be the OpenMP header e.g. reduction(+:var)
     vector<InstrPtr> openmp_reductions;
 
+    bool for_loop = false;
     stringstream ss;
     // "OpenMP for" goes to the outermost loop
     if (block.rank == 0 and openmp_compatible(block)) {
-        // OUTCOMMENTED
-        //        ss << " parallel for";
+        for_loop = true;
+        ss << "PARALLEL DO ";
         // Since we are doing parallel for, we should either do OpenMP reductions or protect the sweep instructions
         for (const InstrPtr &instr: block._sweeps) {
             assert(instr->operand.size() == 3);
@@ -176,7 +177,8 @@ void write_openmp_header(const SymbolTable &symbols, Scope &scope, const LoopB &
 
     // "OpenMP SIMD" goes to the innermost loop (which might also be the outermost loop)
     if (enable_simd and block.isInnermost() and simd_compatible(block, scope)) {
-        ss << " simd";
+        ss << " SIMD";
+
         if (block.rank > 0) { //NB: avoid multiple reduction declarations
             for (const InstrPtr instr: block._sweeps) {
                 openmp_reductions.push_back(instr);
@@ -187,16 +189,31 @@ void write_openmp_header(const SymbolTable &symbols, Scope &scope, const LoopB &
     //Let's write the OpenMP reductions
     for (const InstrPtr instr: openmp_reductions) {
         assert(instr->operand.size() == 3);
-        ss << " reduction(" << openmp_reduce_symbol(instr->opcode) << ":";
+        ss << " REDUCTION(" << openmp_reduce_symbol(instr->opcode) << ":";
         scope.getName(instr->operand[0], ss);
         ss << ")";
     }
+
+    if (for_loop) {
+        ss <<" DEFAULT(PRIVATE) SHARED(";
+        bh_base *b = symbols.getParams()[0];
+        ss << "a" << symbols.baseID(b);
+
+        for(size_t i=1; i < symbols.getParams().size(); ++i) {
+            b = symbols.getParams()[i];
+            ss << ",a" << symbols.baseID(b);
+        }
+        ss <<")";
+
+    }
+
     const string ss_str = ss.str();
     if(not ss_str.empty()) {
-        // OUTCOMMENTED
-        //        out << "#pragma omp" << ss_str << "\n";
+        out << "!$OMP " << ss_str << "\n";
         spaces(out, 4 + block.rank*4);
     }
+
+
 }
 
 // Writes the OpenMP specific for-loop header
@@ -210,7 +227,7 @@ void loop_head_writer(const SymbolTable &symbols, Scope &scope, const LoopB &blo
             --for_loop_size;
         // No need to parallel one-sized loops
         if (for_loop_size > 1) {
-            write_openmp_header(symbols, scope, block, config, out);
+            write_fortran_header(symbols, scope, block, config, out);
         }
     }
 
@@ -229,7 +246,7 @@ void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symb
                         const vector<bh_base*> &kernel_temps, stringstream &ss) {
 
     // Write the header of the launcher subroutine
-    ss << "subroutine launcher(data_list, offset_strides, constants)" << endl;
+    ss << "subroutine launcher(data_list, offset_strides, constants) bind(C)" << endl;
 
     // Include convert_pointer, which unpacks the c pointers for fortran use
     spaces(ss, 4);
@@ -256,6 +273,7 @@ void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symb
     stringstream body;
     {
         stringstream declares;
+
         for(const Block &block: block_list) {
             write_loop_block(symbols, nullptr, block.getLoop(), config, {}, false, true, write_fortran_type,
                              loop_head_writer, declares, body);
