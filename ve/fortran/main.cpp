@@ -28,7 +28,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <bh_opcode.h>
 #include <jitk/fuser.hpp>
 #include <jitk/block.hpp>
-#include <jitk/instruction.hpp>
+//#include <jitk/instruction.hpp>
 #include <jitk/graph.hpp>
 #include <jitk/transformer.hpp>
 #include <jitk/fuser_cache.hpp>
@@ -38,7 +38,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <jitk/apply_fusion.hpp>
 
 #include "engine_fortran.hpp"
-#include "fortran_util.hpp"
+#include "fortran_writer.hpp"
 
 using namespace bohrium;
 using namespace jitk;
@@ -145,163 +145,73 @@ Impl::~Impl() {
     }
 }
 
-// Writing the OpenMP header, which include "parallel for" and "simd"
-void write_fortran_header(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config, stringstream &out) {
-    if (not config.defaultGet<bool>("compiler_openmp", false)) {
-        return;
-    }
-    const bool enable_simd = config.defaultGet<bool>("compiler_openmp_simd", false);
-
-    // All reductions that can be handle directly be the OpenMP header e.g. reduction(+:var)
-    vector<InstrPtr> openmp_reductions;
-
-    bool for_loop = false;
-    stringstream ss;
-    // "OpenMP for" goes to the outermost loop
-    if (block.rank == 0 and openmp_compatible(block)) {
-        for_loop = true;
-        ss << "PARALLEL DO ";
-        // Since we are doing parallel for, we should either do OpenMP reductions or protect the sweep instructions
-        for (const InstrPtr &instr: block._sweeps) {
-            assert(instr->operand.size() == 3);
-            const bh_view &view = instr->operand[0];
-            if (openmp_reduce_compatible(instr->opcode) and (scope.isScalarReplaced(view) or scope.isTmp(view.base))) {
-                openmp_reductions.push_back(instr);
-            } else if (openmp_atomic_compatible(instr->opcode)) {
-                scope.insertOpenmpAtomic(view);
-            } else {
-                scope.insertOpenmpCritical(view);
-            }
-        }
-    }
-
-    // "OpenMP SIMD" goes to the innermost loop (which might also be the outermost loop)
-    if (enable_simd and block.isInnermost() and simd_compatible(block, scope)) {
-        ss << " SIMD";
-
-        if (block.rank > 0) { //NB: avoid multiple reduction declarations
-            for (const InstrPtr instr: block._sweeps) {
-                openmp_reductions.push_back(instr);
-            }
-        }
-    }
-
-    //Let's write the OpenMP reductions
-    for (const InstrPtr instr: openmp_reductions) {
-        assert(instr->operand.size() == 3);
-        ss << " REDUCTION(" << openmp_reduce_symbol(instr->opcode) << ":";
-        scope.getName(instr->operand[0], ss);
-        ss << ")";
-    }
-
-    if (for_loop) {
-        ss <<" DEFAULT(PRIVATE) SHARED(";
-        bh_base *b = symbols.getParams()[0];
-        ss << "a" << symbols.baseID(b);
-
-        for(size_t i=1; i < symbols.getParams().size(); ++i) {
-            b = symbols.getParams()[i];
-            ss << ",a" << symbols.baseID(b);
-        }
-        ss <<")";
-
-    }
-
-    const string ss_str = ss.str();
-    if(not ss_str.empty()) {
-        out << "!$OMP " << ss_str << "\n";
-        spaces(out, 4 + block.rank*4);
-    }
-
-
-}
-
-// Writes the OpenMP specific for-loop header
-void loop_head_writer(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config,
-                      bool loop_is_peeled, const vector<const LoopB *> &threaded_blocks, stringstream &out) {
-
-    // Let's write the OpenMP loop header
-    {
-        int64_t for_loop_size = block.size;
-        if (block._sweeps.size() > 0 and loop_is_peeled) // If the for-loop has been peeled, its size is one less
-            --for_loop_size;
-        // No need to parallel one-sized loops
-        if (for_loop_size > 1) {
-            write_fortran_header(symbols, scope, block, config, out);
-        }
-    }
-
-    // Write the for-loop header
-    string itername;
-    {stringstream t; t << "i" << block.rank; itername = t.str();}
-    out << "do " << itername;
-    if (block._sweeps.size() > 0 and loop_is_peeled) // If the for-loop has been peeled, we should start at 1
-        out << "=1,";
-    else
-        out << "=0,";
-    out << block.size-1 << "\n";
-}
-
 void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symbols, const ConfigParser &config,
                         const vector<bh_base*> &kernel_temps, stringstream &ss) {
 
     // Write the header of the launcher subroutine
-    ss << "subroutine launcher(data_list, offset_strides, constants) bind(C)" << endl;
+    ss << "SUBROUTINE launcher(data_list, offset_strides, constants) BIND(C)" << endl;
 
     // Include convert_pointer, which unpacks the c pointers for fortran use
     spaces(ss, 4);
-    ss << "use iso_c_binding" << endl;
+    ss << "USE iso_c_binding" << endl;
     spaces(ss, 4);
-    ss << "interface" << endl;
+    ss << "INTERFACE" << endl;
     spaces(ss, 8);
-    ss << "function convert_pointer(a,b) result(res) bind(C, name=\"convert_pointer\")" << endl;
+    ss << "FUNCTION convert_pointer(a,b) RESULT(res) BIND(C, name=\"convert_pointer\")" << endl;
     spaces(ss, 12);
-    ss << "use iso_c_binding" << endl;
+    ss << "USE iso_c_binding" << endl;
     spaces(ss, 12);
-    ss << "type(c_ptr) :: a" << endl;
+    ss << "TYPE(c_ptr) :: a" << endl;
     spaces(ss, 12);
     ss << "integer :: b" << endl;
     spaces(ss, 12);
-    ss << "type(c_ptr) :: res" << endl;
+    ss << "TYPE(c_ptr) :: res" << endl;
     spaces(ss, 8);
-    ss << "end function" << endl;
+    ss << "END FUNCTION" << endl;
     spaces(ss, 4);
-    ss << "end interface" << endl;
+    ss << "END INTERFACE" << endl;
     spaces(ss, 4);
-    ss << "type(c_ptr) :: data_list" << endl << endl;
+    ss << "TYPE(c_ptr) :: data_list" << endl << endl;
 
+    FortranWriter* writer = new FortranWriter();
     stringstream body;
     {
-        stringstream declares;
-
-        for(const Block &block: block_list) {
-            write_loop_block(symbols, nullptr, block.getLoop(), config, {}, false, true, write_fortran_type,
-                             loop_head_writer, declares, body);
-        }
-        ss << declares.str() << "\n";
         // For each declares input, declare a fortran pointer and a c pointer
         for(size_t i=0; i < symbols.getParams().size(); ++i) {
             bh_base *b = symbols.getParams()[i];
             spaces(ss, 4);
-            ss << write_fortran_type(b->type) << ", POINTER, dimension (:) :: a" << symbols.baseID(b) << "\n";
+            ss << write_fortran_type(b->type) << ", POINTER, DIMENSION (:) :: a" << symbols.baseID(b) << "\n";
             spaces(ss, 4);
-            ss << "type(c_ptr) :: c" << symbols.baseID(b) << "\n";
+            ss << "TYPE(c_ptr) :: c" << symbols.baseID(b) << "\n";
         }
+
+        for(const Block &block: block_list) {
+            write_loop_block(symbols, nullptr, block.getLoop(), config, {}, false, true, write_fortran_type,
+                             writer);
+
+            const LoopB &loopBlock = block.getLoop();
+            vector<const bh_view*> scalar_replaced_input_only;
+            vector<const bh_view*> scalar_replaced_reduction_outputs;
+            Scope scope(symbols, nullptr, loopBlock.getLocalTemps(), scalar_replaced_reduction_outputs,
+                        scalar_replaced_input_only, config);
+        }
+
     }
-    cout << "\n";
+    ss << writer->declarations.str();
+
     // Write convert statements for the c pointers
     for(size_t i=0; i < symbols.getParams().size(); ++i) {
         bh_base *b = symbols.getParams()[i];
         spaces(ss, 4);
         ss << "c" << symbols.baseID(b) << "= CONVERT_POINTER(" << "data_list, " << i << ")" << "\n";
         spaces(ss, 4);
-        ss << "call c_f_pointer(c" << symbols.baseID(b) << ", a" << symbols.baseID(b) << ", shape=[" << b->nelem << "])\n";
+        ss << "CALL c_f_pointer(c" << symbols.baseID(b) << ", a" << symbols.baseID(b) << ", shape=[" << b->nelem << "])\n";
     }
 
-    ss << body.str() << "\n";
+    ss << writer->ss.str();
 
     // End the subroutine
-    ss << "end subroutine launcher\n\n";
+    ss << "END SUBROUTINE LAUNCHER\n\n";
 }
 
 void Impl::execute(bh_ir *bhir) {
