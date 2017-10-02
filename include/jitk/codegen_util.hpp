@@ -28,6 +28,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <functional>
 #include <boost/filesystem/path.hpp>
 
+#include <jitk/writer.hpp>
 #include <bh_util.hpp>
 #include <bh_type.hpp>
 #include <bh_instruction.hpp>
@@ -43,7 +44,6 @@ If not, see <http://www.gnu.org/licenses/>.
 
 namespace bohrium {
 namespace jitk {
-
 
 // Write 'num' of spaces to 'out'
 void spaces(std::stringstream &out, int num);
@@ -89,15 +89,7 @@ void write_loop_block(const SymbolTable &symbols,
                       bool opencl,
                       bool fortran,
                       std::function<const char *(bh_type type)> type_writer,
-                      std::function<void (const SymbolTable &symbols,
-                                          Scope &scope,
-                                          const LoopB &block,
-                                          const ConfigParser &config,
-                                          bool loop_is_peeled,
-                                          const std::vector<const LoopB *> &threaded_blocks,
-                                          std::stringstream &out)> head_writer,
-                      std::stringstream &declares,
-                      std::stringstream &out);
+                      Writer* writer);
 
 // Sets the constructor flag of each instruction in 'instr_list'
 // 'remotely_allocated_bases' is a collection of array bases already remotely allocated
@@ -115,6 +107,8 @@ void util_set_constructor_flag(std::vector<bh_instruction *> &instr_list, const 
                     if (o == 0) { // It is only the output that is initiated
                         initiated.insert(v.base);
                         instr->constructor = true;
+
+
                     }
                 }
             }
