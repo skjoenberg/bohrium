@@ -746,7 +746,8 @@ bool has_reduce_identity(bh_opcode opcode) {
     }
 }
 
-void write_reduce_identity(bh_opcode opcode, bh_type dtype, stringstream &out) {
+string write_reduce_identity(bh_opcode opcode, bh_type dtype) {
+    stringstream out;
     switch (opcode) {
         case BH_ADD_REDUCE:
         case BH_BITWISE_OR_REDUCE:
@@ -769,6 +770,7 @@ void write_reduce_identity(bh_opcode opcode, bh_type dtype, stringstream &out) {
             cout << "openmp_reduce_identity: unsupported operation: " << bh_opcode_text(opcode) << endl;
             throw runtime_error("openmp_reduce_identity: unsupported operation");
     }
+    return out.str();
 }
 
 vector<bh_instruction*> remove_non_computed_system_instr(vector<bh_instruction> &instr_list,
@@ -809,7 +811,7 @@ InstrPtr reshape_rank(const InstrPtr &instr, int rank, int64_t size_of_rank_dim)
     bh_instruction ret = bh_instruction(*instr);
     ret.reshape(shape);
     return std::make_shared<bh_instruction>(ret);
-}
+}<
 
 } // jitk
 } // bohrium
