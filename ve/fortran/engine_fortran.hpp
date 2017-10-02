@@ -82,9 +82,6 @@ class EngineFortran {
     // Return a YAML string describing this component
     std::string info() const;
 };
-
-
-
 } // bohrium
 
 #endif
