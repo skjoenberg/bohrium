@@ -22,7 +22,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <iomanip>
 #include <boost/filesystem/operations.hpp>
 #include <jitk/codegen_util.hpp>
-#include <jitk/view.hpp>
+#include <jitk/writer.hpp>
 #include <jitk/instruction.hpp>
 
 using namespace std;
@@ -42,7 +42,6 @@ bool sweeping_innermost_axis(InstrPtr instr) {
     return instr->sweep_axis() == instr->operand[1].ndim - 1;
 }
 }
-
 
 void spaces(std::stringstream &out, int num) {
     for (int i = 0; i < num; ++i) {
@@ -162,25 +161,13 @@ void write_loop_block(const SymbolTable &symbols,
                       bool opencl,
                       bool fortran,
                       std::function<const char *(bh_type type)> type_writer,
-                      std::function<void (const SymbolTable &symbols,
-                                          Scope &scope,
-                                          const LoopB &block,
-                                          const ConfigParser &config,
-                                          bool loop_is_peeled,
-                                          const std::vector<const LoopB *> &threaded_blocks,
-                                          std::stringstream &out)> head_writer,
-                      std::stringstream &declares,
-                      std::stringstream &out) {
-
+                      Writer* writer) {
     if (block.isSystemOnly()) {
-        if (fortran) {
-            out << "! Removed loop with only system instructions\n";
-        } else {
-            out << "// Removed loop with only system instructions\n";
-        }
+        writer->comment("Removed loop with only system instructions\n");
         return;
     }
-    spaces(out, 4 + block.rank*4);
+
+    writer->spaces(4 + block.rank*4);
 
     // Let's find the local temporary arrays and the arrays to scalar replace
     const set<bh_base *> &local_tmps = block.getLocalTemps();
@@ -190,7 +177,7 @@ void write_loop_block(const SymbolTable &symbols,
     for (const InstrPtr &instr: block._sweeps) {
         if (bh_opcode_is_reduction(instr->opcode) and sweeping_innermost_axis(instr)) {
             if (local_tmps.find(instr->operand[0].base) == local_tmps.end() and
-                    (parent_scope == nullptr or parent_scope->isArray(instr->operand[0]))) {
+                (parent_scope == nullptr or parent_scope->isArray(instr->operand[0]))) {
                 scalar_replaced_reduction_outputs.push_back(&instr->operand[0]);
             }
         }
@@ -241,9 +228,7 @@ void write_loop_block(const SymbolTable &symbols,
             const bh_view &output = instr->operand[0];
             if (not scope.isDeclared(output) and not scope.isArray(output)) {
                 // Let's write the declaration of the scalar variable
-                scope.writeDeclaration(output, type_writer(output.base->type), declares);
-                declares << "\n";
-                spaces(declares, 4 + block.rank * 4);
+                writer->declare(output, type_writer(output.base->type), 4 + block.rank * 4, &scope);
             }
         }
     }
@@ -282,15 +267,13 @@ void write_loop_block(const SymbolTable &symbols,
         for (const InstrPtr &instr: block._sweeps) {
             const bh_view &view = instr->operand[0];
             if (not scope.isArray(view) and not scope.isDeclared(view)) {
-                scope.writeDeclaration(view, type_writer(view.base->type), declares);
-                declares << "\n";
-                spaces(declares, 4 + block.rank * 4);
+                writer->declare(view, type_writer(view.base->type), 4 + block.rank * 4, &scope);
             }
-            scope.getName(view, out);
-            out << " = ";
-            write_reduce_identity(instr->opcode, view.base->type, out);
-            out << ";\n";
-            spaces(out, 4 + block.rank * 4);
+            writer->write(scope.getName(view));
+            writer->write(" = ");
+            writer->write(write_reduce_identity(instr->opcode, view.base->type));
+            writer->endl();
+            writer->spaces(4 + block.rank * 4);
         }
     }
 
@@ -312,13 +295,13 @@ void write_loop_block(const SymbolTable &symbols,
         string itername;
         {stringstream t; t << "i" << block.rank; itername = t.str();}
         if (fortran) {
-            out << "! Peeled loop, 1. sweep iteration\n";
-            spaces(out, 8 + block.rank*4);
-            out << itername << " = 0;\n";
+            writer->write("! Peeled loop, 1. sweep iteration\n");
+            writer->spaces(8 + block.rank*4);
+            writer->write(((string) itername) + " = 0;\n");
         } else {
-            out << "{ // Peeled loop, 1. sweep iteration\n";
-            spaces(out, 8 + block.rank*4);
-            declares << type_writer(bh_type::UINT64) << " " << itername << " = 0;\n";
+            writer->write("{ // Peeled loop, 1. sweep iteration\n");
+            writer->spaces(8 + block.rank*4);
+            writer->write(string(type_writer(bh_type::UINT64)) + " " + " " + string(itername) + " = 0;\n");
         }
 
         // Write temporary and scalar replaced array declarations
@@ -326,20 +309,16 @@ void write_loop_block(const SymbolTable &symbols,
             for (const bh_view *view: instr->get_views()) {
                 if (not peeled_scope.isDeclared(*view)) {
                     if (peeled_scope.isTmp(view->base)) {
-                        spaces(out, 8 + block.rank * 4);
                         if (not fortran) {
-                            peeled_scope.writeDeclaration(*view, type_writer(view->base->type), declares);
-                            out << "\n";
+                            writer->declare(*view, type_writer(view->base->type), 8 + block.rank * 4, &scope);
                         }
                     } else if (peeled_scope.isScalarReplaced_R(*view)) {
-                        spaces(out, 8 + block.rank * 4);
                         if (not fortran) {
-                            peeled_scope.writeDeclaration(*view, type_writer(view->base->type), declares);
+                            writer->declare(*view, type_writer(view->base->type), 8 + block.rank * 4, &scope);
                         }
-                        out << " " << peeled_scope.getName(*view) << " = a" << symbols.baseID(view->base);
-                        write_array_subscription(peeled_scope, *view, out);
-                        out << ";";
-                        out << "\n";
+                        writer->write(" " + string(peeled_scope.getName(*view)) + " = a" + to_string(symbols.baseID(view->base)));
+                        writer->write(writer->write_array_subscription(peeled_scope, *view));
+                        writer->endl();
                     }
                 }
             }
@@ -347,53 +326,42 @@ void write_loop_block(const SymbolTable &symbols,
         // Write the indexes declarations
         for (const bh_view *view: indexes) {
             if (not peeled_scope.isIdxDeclared(*view)) {
-                spaces(out, 8 + block.rank * 4);
                 if (not fortran) {
-                    peeled_scope.writeIdxDeclaration(*view, type_writer(bh_type::UINT64), declares);
+                    writer->declareIdx(*view, type_writer(bh_type::UINT64), 8 + block.rank * 4, &peeled_scope);
                 }
-                out << "\n";
             }
         }
-        out << "\n";
         for (const Block &b: peeled_block._block_list) {
             if (b.isInstr()) {
                 if (b.getInstr() != nullptr and not bh_opcode_is_system(b.getInstr()->opcode)) {
-                    spaces(out, 4 + b.rank()*4);
-                    write_instr(peeled_scope, *b.getInstr(), out, opencl);
+                    writer->spaces(4 + b.rank()*4);
+                    writer->write_instr(peeled_scope, *b.getInstr());
                 }
             } else {
                 write_loop_block(symbols, &peeled_scope, b.getLoop(), config, threaded_blocks, opencl, fortran,
-                                 type_writer, head_writer, declares, out);
+                                 type_writer, writer);
             }
         }
-        spaces(out, 4 + block.rank*4);
-        if (fortran) {
-            out << "END DO";
-        } else {
-            out << "}";
-        }
-        out << "\n";
-        spaces(out, 4 + block.rank*4);
+        writer->spaces(4 + block.rank*4);
+        writer->end_loop();
+        writer->spaces(4 + block.rank*4);
     }
 
     // Write the for-loop header
-    head_writer(symbols, scope, block, config, need_to_peel, threaded_blocks, out);
+    writer->loop_head_writer(symbols, scope, block, config, need_to_peel, threaded_blocks);
 
     // Write temporary and scalar replaced array declarations
     for (const InstrPtr &instr: block.getLocalInstr()) {
         for (const bh_view *view: instr->get_views()) {
             if (not scope.isDeclared(*view)) {
                 if (scope.isTmp(view->base)) {
-                    spaces(out, 8 + block.rank * 4);
-                    scope.writeDeclaration(*view, type_writer(view->base->type), declares);
-                    declares << "\n";
+                    writer->declare(*view, type_writer(view->base->type), 8 + block.rank * 4, &scope);
                 } else if (scope.isScalarReplaced_R(*view)) {
-                    spaces(out, 8 + block.rank * 4);
-                    scope.writeDeclaration(*view, type_writer(view->base->type), declares);
-                    out << " " << scope.getName(*view) << " = a" << symbols.baseID(view->base);
-                    write_array_subscription(scope, *view, out);
-                    out << ";";
-                    out << "\n";
+                    writer->declare(*view, type_writer(view->base->type), 8 + block.rank * 4, &scope);
+                    writer->spaces(8 + block.rank*4);
+                    writer->write(string(scope.getName(*view)) + " = a" + to_string(symbols.baseID(view->base)));
+                    writer->write(writer->write_array_subscription(scope, *view));
+                    writer->endl();
                 }
             }
         }
@@ -401,9 +369,7 @@ void write_loop_block(const SymbolTable &symbols,
     // Write the indexes declarations
     for (const bh_view *view: indexes) {
         if (not scope.isIdxDeclared(*view)) {
-            spaces(out, 8 + block.rank * 4);
-            scope.writeIdxDeclaration(*view, type_writer(bh_type::UINT64), declares);
-            declares << "\n";
+            writer->declareIdx(*view, type_writer(bh_type::UINT64), 8 + block.rank * 4, &scope);
         }
     }
 
@@ -413,12 +379,12 @@ void write_loop_block(const SymbolTable &symbols,
         for (const Block &b: block._block_list) {
             if (b.isInstr()) { // Finally, let's write the instruction
                 if (b.getInstr() != NULL and not bh_opcode_is_system(b.getInstr()->opcode)) {
-                    spaces(out, 4 + b.rank()*4);
-                    write_instr(scope, *b.getInstr(), out, true);
+                    writer->spaces(4 + b.rank()*4);
+                    writer->write_instr(scope, *b.getInstr());
                 }
             } else {
                 write_loop_block(symbols, &scope, b.getLoop(), config, threaded_blocks, opencl, fortran, type_writer,
-                                 head_writer, declares, out);
+                                 writer);
             }
         }
     } else {
@@ -428,38 +394,33 @@ void write_loop_block(const SymbolTable &symbols,
                 if (not bh_opcode_is_system(instr->opcode)) {
                     if (instr->operand.size() > 0) {
                         if (scope.isOpenmpAtomic(instr->operand[0])) {
-                            spaces(out, 4 + b.rank()*4);
-                            out << "#pragma omp atomic\n";
+                            writer->spaces(4 + b.rank()*4);
+                            writer->write("#pragma omp atomic\n");
                         } else if (scope.isOpenmpCritical(instr->operand[0])) {
-                            spaces(out, 4 + b.rank()*4);
-                            out << "#pragma omp critical\n";
+                            writer->spaces(4 + b.rank()*4);
+                            writer->write("#pragma omp critical\n");
                         }
                     }
-                    spaces(out, 4 + b.rank()*4);
-                    write_instr(scope, *instr, out);
+                    writer->spaces(4 + b.rank()*4);
+                    writer->write_instr(scope, *instr);
                 }
             } else {
                 write_loop_block(symbols, &scope, b.getLoop(), config, threaded_blocks, opencl, fortran, type_writer,
-                                 head_writer, declares, out);
+                               writer);
             }
         }
     }
-    spaces(out, 4 + block.rank*4);
-    if (fortran) {
-        out << "END DO";
-    } else {
-        out << "}";
-    }
-    out << "\n";
+    writer->spaces(4 + block.rank*4);
+    writer->end_loop();
 
     // Let's copy the scalar replaced reduction outputs back to the original array
     for (const bh_view *view: scalar_replaced_reduction_outputs) {
-        spaces(out, 4 + block.rank*4);
-        out << "a" << symbols.baseID(view->base);
-        write_array_subscription(scope, *view, out, true);
-        out << " = ";
-        scope.getName(*view, out);
-        out << ";\n";
+        writer->spaces(4 + block.rank*4);
+        writer->write("a" + to_string(symbols.baseID(view->base)));
+        writer->write(writer->write_array_subscription(scope, *view, true));
+        writer->write(" = ");
+        writer->write(scope.getName(*view));
+        writer->endl();
     }
 }
 
@@ -483,6 +444,5 @@ void util_handle_extmethod(component::ComponentImpl *self,
     }
     bhir->instr_list = instr_list;
 }
-
 } // jitk
 } // bohrium
