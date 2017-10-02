@@ -184,7 +184,7 @@ tmp_dir =
 # Directory for cache files (persistent between executions). Default: the empty string, which disable the cache
 cache_dir = ${BIN_KERNEL_CACHE_DIR}
 # The command to execute the compiler where {OUT} is replaced with the binary file output and {IN} with the source file
-compiler_cmd = "gfortran -shared -fPIC ${VE_OPENMP_COMPILER_INC} ${VE_OPENMP_COMPILER_LIB} -lc {IN} -o {OUT}"
+compiler_cmd = "gfortran -shared -fPIC ${VE_OPENMP_COMPILER_INC}  {IN} -o {OUT} -lbh_ve_fortran_convert_ptr ${VE_OPENMP_COMPILER_LIB} -lc -lbh_ve_fortran_convert_ptr -fopenmp -fopenmp-simd"
 # JIT compile options
 compiler_openmp = ${_VE_OPENMP_COMPILER_OPENMP}
 compiler_openmp_simd = ${_VE_OPENMP_COMPILER_OPENMP_SIMD}

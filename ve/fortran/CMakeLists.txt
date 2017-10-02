@@ -11,8 +11,7 @@ include_directories(${CMAKE_BINARY_DIR}/include)
 file(GLOB SRC *.cpp)
 
 add_library(bh_ve_fortran SHARED ${SRC})
-
-add_library(bh_ve_fortran_convert_ptr SHARED convertpointer.c)
+add_library(bh_ve_fortran_convert_ptr SHARED convertpointer.cpp)
 
 target_link_libraries(bh_ve_fortran bh)
 
