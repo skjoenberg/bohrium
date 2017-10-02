@@ -39,7 +39,7 @@ void write_instr(const Scope &scope, const bh_instruction &instr, std::stringstr
 bool has_reduce_identity(bh_opcode opcode);
 
 // Write the neutral value of a reduction
-void write_reduce_identity(bh_opcode opcode, bh_type dtype, std::stringstream &out);
+std::string write_reduce_identity(bh_opcode opcode, bh_type dtype);
 
 // Removes syncs and frees from 'instr_list' that are never used in a computation.
 // 'syncs' and 'frees' are the sets of arrays that were removed.
