@@ -167,7 +167,7 @@ void write_loop_block(const SymbolTable &symbols,
         return;
     }
 
-    writer->spaces(4 + block.rank*4);
+    //writer->spaces(4 + block.rank*4);
 
     // Let's find the local temporary arrays and the arrays to scalar replace
     const set<bh_base *> &local_tmps = block.getLocalTemps();
@@ -269,11 +269,11 @@ void write_loop_block(const SymbolTable &symbols,
             if (not scope.isArray(view) and not scope.isDeclared(view)) {
                 writer->declare(view, type_writer(view.base->type), 4 + block.rank * 4, &scope);
             }
+            writer->spaces(4+block.rank*4);
             writer->write(scope.getName(view));
             writer->write(" = ");
             writer->write(write_reduce_identity(instr->opcode, view.base->type));
             writer->endl();
-            writer->spaces(4 + block.rank * 4);
         }
     }
 
@@ -342,9 +342,9 @@ void write_loop_block(const SymbolTable &symbols,
                                  type_writer, writer);
             }
         }
-        writer->spaces(4 + block.rank*4);
+        writer->spaces(4+block.rank*4);
         writer->end_loop();
-        writer->spaces(4 + block.rank*4);
+        //writer->spaces(4 + block.rank*4);
     }
 
     // Write the for-loop header
@@ -410,7 +410,7 @@ void write_loop_block(const SymbolTable &symbols,
             }
         }
     }
-    writer->spaces(4 + block.rank*4);
+    writer->spaces(4+block.rank*4);
     writer->end_loop();
 
     // Let's copy the scalar replaced reduction outputs back to the original array
