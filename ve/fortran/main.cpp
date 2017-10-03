@@ -199,6 +199,7 @@ void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symb
     }
     ss << writer->declarations.str();
 
+    ss << "\n";
     // Write convert statements for the c pointers
     for(size_t i=0; i < symbols.getParams().size(); ++i) {
         bh_base *b = symbols.getParams()[i];
@@ -207,6 +208,7 @@ void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symb
         spaces(ss, 4);
         ss << "CALL c_f_pointer(c" << symbols.baseID(b) << ", a" << symbols.baseID(b) << ", shape=[" << b->nelem << "])\n";
     }
+    ss << "\n";
 
     ss << writer->ss.str();
 
