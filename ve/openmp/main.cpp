@@ -38,7 +38,8 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <jitk/apply_fusion.hpp>
 
 #include "engine_openmp.hpp"
-#include "openmp_util.hpp"
+
+#include "openmp_writer.hpp"
 
 using namespace bohrium;
 using namespace jitk;
@@ -145,84 +146,6 @@ Impl::~Impl() {
     }
 }
 
-// Writing the OpenMP header, which include "parallel for" and "simd"
-void write_openmp_header(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config, stringstream &out) {
-    if (not config.defaultGet<bool>("compiler_openmp", false)) {
-        return;
-    }
-    const bool enable_simd = config.defaultGet<bool>("compiler_openmp_simd", false);
-
-    // All reductions that can be handle directly be the OpenMP header e.g. reduction(+:var)
-    vector<InstrPtr> openmp_reductions;
-
-    stringstream ss;
-    // "OpenMP for" goes to the outermost loop
-    if (block.rank == 0 and openmp_compatible(block)) {
-        ss << " parallel for";
-        // Since we are doing parallel for, we should either do OpenMP reductions or protect the sweep instructions
-        for (const InstrPtr &instr: block._sweeps) {
-            assert(instr->operand.size() == 3);
-            const bh_view &view = instr->operand[0];
-            if (openmp_reduce_compatible(instr->opcode) and (scope.isScalarReplaced(view) or scope.isTmp(view.base))) {
-                openmp_reductions.push_back(instr);
-            } else if (openmp_atomic_compatible(instr->opcode)) {
-                scope.insertOpenmpAtomic(view);
-            } else {
-                scope.insertOpenmpCritical(view);
-            }
-        }
-    }
-
-    // "OpenMP SIMD" goes to the innermost loop (which might also be the outermost loop)
-    if (enable_simd and block.isInnermost() and simd_compatible(block, scope)) {
-        ss << " simd";
-        if (block.rank > 0) { //NB: avoid multiple reduction declarations
-            for (const InstrPtr instr: block._sweeps) {
-                openmp_reductions.push_back(instr);
-            }
-        }
-    }
-
-    //Let's write the OpenMP reductions
-    for (const InstrPtr instr: openmp_reductions) {
-        assert(instr->operand.size() == 3);
-        ss << " reduction(" << openmp_reduce_symbol(instr->opcode) << ":";
-        scope.getName(instr->operand[0], ss);
-        ss << ")";
-    }
-    const string ss_str = ss.str();
-    if(not ss_str.empty()) {
-        out << "#pragma omp" << ss_str << "\n";
-        spaces(out, 4 + block.rank*4);
-    }
-}
-
-// Writes the OpenMP specific for-loop header
-void loop_head_writer(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config, bool loop_is_peeled,
-                      const vector<const LoopB *> &threaded_blocks, stringstream &out) {
-
-    // Let's write the OpenMP loop header
-    {
-        int64_t for_loop_size = block.size;
-        if (block._sweeps.size() > 0 and loop_is_peeled) // If the for-loop has been peeled, its size is one less
-            --for_loop_size;
-        // No need to parallel one-sized loops
-        if (for_loop_size > 1) {
-            write_openmp_header(symbols, scope, block, config, out);
-        }
-    }
-
-    // Write the for-loop header
-    string itername;
-    {stringstream t; t << "i" << block.rank; itername = t.str();}
-    out << "for(uint64_t " << itername;
-    if (block._sweeps.size() > 0 and loop_is_peeled) // If the for-loop has been peeled, we should start at 1
-        out << "=1; ";
-    else
-        out << "=0; ";
-    out << itername << " < " << block.size << "; ++" << itername << ") {\n";
-}
-
 void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symbols, const ConfigParser &config,
                         const vector<bh_base*> &kernel_temps, stringstream &ss) {
 
@@ -253,10 +176,12 @@ void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symb
     }
     ss << "\n";
 
+    OpenMPWriter* writer = new OpenMPWriter();
     for(const Block &block: block_list) {
         write_loop_block(symbols, nullptr, block.getLoop(), config, {}, false, false, write_c99_type,
-                         loop_head_writer, ss, ss);
+                         writer);
     }
+    ss << writer->ss.str();
 
     // Write frees of the kernel temporaries
     ss << "\n";
