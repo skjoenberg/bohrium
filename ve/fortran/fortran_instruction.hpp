@@ -11,7 +11,7 @@ using namespace std;
 
 namespace bohrium {
 namespace jitk {
-    string operation(const bh_instruction &instr, const vector<string> &ops);
+string operation(const bh_instruction &instr, const vector<string> &ops);
 }
 }
 #endif
