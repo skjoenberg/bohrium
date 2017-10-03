@@ -38,7 +38,7 @@ void Scope::writeIdxDeclaration(const bh_view &view, const string &type_str, str
     } else {
         write_array_index(*this, view, out);
     }
-    out << ");";
+    out << ")";
 }
 
 } // jitk
