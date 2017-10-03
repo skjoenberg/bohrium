@@ -6,7 +6,7 @@
 #include <stack>
 #include <jitk/writer.hpp>
 
-#include "instruction.hpp"
+#include "fortran_instruction.hpp"
 
 using namespace bohrium;
 using namespace jitk;
@@ -30,6 +30,10 @@ public:
     FortranWriter() {}
     ~FortranWriter() {}
 
+    void write(const string s) {
+        ss << s;
+    }
+
     void declare(const bh_view &view, const string &type_str, int spacing, Scope* scope) {
         declarations << write_spaces(4);
         (*scope).writeDeclaration(view, type_str, declarations);
@@ -41,12 +45,12 @@ public:
         (*scope).writeIdxDeclaration(view, type_str, declarations);
     }
 
-    void write(const string s) {
-        ss << s;
-    }
-
     void spaces(const int spacing) {
         ss << write_spaces(spacing);
+    }
+
+    void comment(const string s) {
+        ss << "! " << s;
     }
 
     void endl() {
@@ -63,10 +67,7 @@ public:
         }
     }
 
-    void comment(const string s) {
-        ss << "! " << s;
-    }
-
+    /*
     string output() {
         string out = declarations.str() + ss.str();
         return out;
@@ -76,7 +77,16 @@ public:
         ss.str("");
         declarations.str("");
     }
+*/
 
+    string write_array_index(const Scope &scope, const bh_view &view,
+                             int hidden_axis = BH_MAXDIM, const pair<int, int> axis_offset = std::make_pair(BH_MAXDIM, 0));
+
+    string write_array_index_variables(const Scope &scope, const bh_view &view,
+                                       int hidden_axis = BH_MAXDIM, const pair<int, int> axis_offset = std::make_pair(BH_MAXDIM, 0));
+
+    string write_array_subscription(const Scope &scope, const bh_view &view, bool ignore_declared_indexes=false,
+                                    int hidden_axis = BH_MAXDIM, const pair<int, int> axis_offset = std::make_pair(BH_MAXDIM, 0));
 
     void write_operation(const bh_instruction &instr, const vector<string> &ops) {
         ss << operation(instr, ops);
@@ -253,16 +263,6 @@ public:
         }
         write_operation(instr, ops);
     }
-
-    string write_array_index(const Scope &scope, const bh_view &view,
-                             int hidden_axis = BH_MAXDIM, const pair<int, int> axis_offset = std::make_pair(BH_MAXDIM, 0));
-
-    string write_array_index_variables(const Scope &scope, const bh_view &view,
-                                     int hidden_axis = BH_MAXDIM, const pair<int, int> axis_offset = std::make_pair(BH_MAXDIM, 0));
-
-    string write_array_subscription(const Scope &scope, const bh_view &view, bool ignore_declared_indexes=false,
-                                    int hidden_axis = BH_MAXDIM, const pair<int, int> axis_offset = std::make_pair(BH_MAXDIM, 0));
-
 
     // Writes the OpenMP specific for-loop header
     void loop_head_writer(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config,

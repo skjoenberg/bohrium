@@ -8,7 +8,6 @@ using namespace bohrium;
 using namespace jitk;
 using namespace std;
 
-
 string FortranWriter::write_array_index(const Scope &scope, const bh_view &view,
                                         int hidden_axis, const pair<int, int> axis_offset) {
     stringstream out;
@@ -145,10 +144,10 @@ void FortranWriter::write_header(const SymbolTable &symbols, Scope &scope, const
 
     const string tmp_str = tmp.str();
     if(not tmp_str.empty()) {
+        spaces(4 + block.rank*4);
         ss << "!$OMP" << tmp_str;
         endl();
         footer.push(write_spaces(4 + block.rank*4) + "!$OMP END" + tmp_foot.str());
-        spaces(4 + block.rank*4);
     }
 }
 
@@ -166,6 +165,7 @@ void FortranWriter::loop_head_writer(const SymbolTable &symbols, Scope &scope, c
     }
 
     // Write the for-loop header
+    spaces(4+block.rank*4);
     string itername;
     {stringstream t; t << "i" << block.rank; itername = t.str();}
     ss << "DO " << itername;
