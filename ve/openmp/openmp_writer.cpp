@@ -124,10 +124,10 @@ void OpenMPWriter::write_header(const SymbolTable &symbols, Scope &scope, const 
     }
     const string tmp_str = tmp.str();
     if(not tmp_str.empty()) {
-        spaces(4+block.rank*4);
+        spaces(block.rank*4);
         ss << "#pragma omp" << tmp_str << "\n";
     }
-    
+
 }
 
 void OpenMPWriter::loop_head_writer(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config,
