@@ -40,6 +40,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <jitk/apply_fusion.hpp>
 
 #include "engine_opencl.hpp"
+#include "opencl_writer.hpp"
 
 using namespace bohrium;
 using namespace jitk;
@@ -207,10 +208,11 @@ void Impl::write_kernel(const Block &block, const SymbolTable &symbols, const Co
         ss << "\n";
     }
 
+    OpenCLWriter* writer = new OpenCLWriter;
     // Write the block that makes up the body of 'execute()'
     write_loop_block(symbols, nullptr, block.getLoop(), config, threaded_blocks, true, false, write_opencl_type,
-                     loop_head_writer, ss, ss);
-
+                     writer);
+    ss << writer->ss.str();
     ss << "}\n\n";
 }
 
