@@ -261,6 +261,8 @@ string operation(const bh_instruction &instr, const vector<string> &ops) {
                 out << ops[0] << " = " << ops[1] << ";\n"; // no-op
             } else if (bh_type_is_float(t0)) {
                 out << ops[0] << " = fabs(" << ops[1] << ");\n";
+            } else if (t0 == bh_type::INT64) {
+                out << ops[0] << " = llabs(" << ops[1] << ");\n";
             } else
                 out << ops[0] << " = abs((int)" << ops[1] << ");\n";
         }
