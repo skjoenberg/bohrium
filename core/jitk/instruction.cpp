@@ -811,7 +811,7 @@ InstrPtr reshape_rank(const InstrPtr &instr, int rank, int64_t size_of_rank_dim)
     bh_instruction ret = bh_instruction(*instr);
     ret.reshape(shape);
     return std::make_shared<bh_instruction>(ret);
-}<
+}
 
 } // jitk
 } // bohrium
