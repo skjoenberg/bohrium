@@ -172,6 +172,26 @@ void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symb
     ss << "END INTERFACE" << endl;
     spaces(ss, 4);
     ss << "TYPE(c_ptr) :: data_list" << endl << endl;
+    if (symbols.useRandom()) { // Write the random function
+        spaces(ss, 4);
+        ss << "INTERFACE" << endl;
+        spaces(ss, 8);
+        ss << "FUNCTION random123(start, key, index) RESULT(res) BIND(C, name=\"random123\")" << endl;
+        spaces(ss, 12);
+        ss << "USE iso_c_binding" << endl;
+        spaces(ss, 12);
+        ss << "INTEGER :: start" << endl;
+        spaces(ss, 12);
+        ss << "INTEGER :: key" << endl;
+        spaces(ss, 12);
+        ss << "INTEGER :: index" << endl;
+        spaces(ss, 12);
+        ss << "INTEGER*16 :: res" << endl;
+        spaces(ss, 8);
+        ss << "END FUNCTION" << endl;
+        spaces(ss, 4);
+        ss << "END INTERFACE" << endl;
+    }
 
     FortranWriter* writer = new FortranWriter();
     stringstream body;
