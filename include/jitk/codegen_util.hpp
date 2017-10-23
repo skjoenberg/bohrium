@@ -40,6 +40,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <jitk/instruction.hpp>
 #include <jitk/fuser_cache.hpp>
 #include <jitk/apply_fusion.hpp>
+#include <jitk/statistics.hpp>
 
 
 namespace bohrium {
@@ -118,17 +119,19 @@ void util_set_constructor_flag(std::vector<bh_instruction *> &instr_list, const 
 
 // Handle the extension methods within the 'bhir'
 void util_handle_extmethod(component::ComponentImpl *self,
-                           bh_ir *bhir,
-                           std::map<bh_opcode, extmethod::ExtmethodFace> &extmethods);
+                           BhIR *bhir,
+                           std::map<bh_opcode, extmethod::ExtmethodFace> &extmethods,
+                           Statistics &stat);
 
 // Handle the extension methods within the 'bhir'
 // This version takes a child component and possible an engine that must have a copyToHost() method
 template<typename T>
 void util_handle_extmethod(component::ComponentImpl *self,
-                           bh_ir *bhir,
+                           BhIR *bhir,
                            std::map<bh_opcode, extmethod::ExtmethodFace> &extmethods,
                            std::set<bh_opcode> &child_extmethods,
                            component::ComponentFace &child,
+                           Statistics &stat,
                            T *acc_engine = NULL) {
 
     std::vector<bh_instruction> instr_list;
@@ -138,14 +141,14 @@ void util_handle_extmethod(component::ComponentImpl *self,
 
         if (ext != extmethods.end() or childext != child_extmethods.end()) {
             // Execute the instructions up until now
-            bh_ir b;
-            b.instr_list = instr_list;
+            BhIR b(std::move(instr_list), bhir->getSyncs());
             self->execute(&b);
-            instr_list.clear();
+            instr_list.clear(); // Notice, it is legal to clear a moved vector.
 
             if (ext != extmethods.end()) {
-                // Execute the extension method
-                ext->second.execute(&instr, acc_engine);
+                const auto texecution = std::chrono::steady_clock::now();
+                ext->second.execute(&instr, acc_engine); // Execute the extension method
+                stat.time_ext_method += std::chrono::steady_clock::now() - texecution;
             } else if (childext != child_extmethods.end()) {
                 // We let the child component execute the instruction
                 std::set<bh_base *> ext_bases = instr.get_bases();
@@ -187,7 +190,7 @@ inline std::vector<const LoopB*> find_threaded_blocks(const Block &block, Statis
  *     - set_constructor_flag(...)
  */
 template<typename SelfType, typename EngineType>
-void handle_cpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const ConfigParser &config, Statistics &stat,
+void handle_cpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const ConfigParser &config, Statistics &stat,
                           FuseCache &fcache) {
     using namespace std;
 
@@ -199,14 +202,13 @@ void handle_cpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
     const bool monolithic = config.defaultGet<bool>("monolithic", false);
 
     // Some statistics
-    stat.record(bhir->instr_list);
+    stat.record(*bhir);
 
     // Let's start by cleanup the instructions from the 'bhir'
     vector<bh_instruction*> instr_list;
     {
-        set<bh_base*> syncs;
         set<bh_base*> frees;
-        instr_list = remove_non_computed_system_instr(bhir->instr_list, syncs, frees);
+        instr_list = remove_non_computed_system_instr(bhir->instr_list, frees);
 
         // Let's free device buffers and array memory
         for(bh_base *base: frees) {
@@ -262,8 +264,10 @@ void handle_cpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
         // Let's execute the kernel
         if (kernel_is_computing) { // We can skip this step if the kernel does no computation
             // Code generation
+            const auto tcodegen = chrono::steady_clock::now();
             stringstream ss;
             self.write_kernel(block_list, symbols, config, kernel_temps, ss);
+            stat.time_codegen += chrono::steady_clock::now() - tcodegen;
 
             // Create the constant vector
             vector<const bh_instruction*> constants;
@@ -293,9 +297,10 @@ void handle_cpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
             // Let's execute the kernel
             if (not block.isSystemOnly()) { // We can skip this step if the kernel does no computation
                 // Code generation
+                const auto tcodegen = chrono::steady_clock::now();
                 stringstream ss;
-
                 self.write_kernel({block}, symbols, config, {}, ss);
+                stat.time_codegen += chrono::steady_clock::now() - tcodegen;
 
                 // Create the constant vector
                 vector<const bh_instruction*> constants;
@@ -328,7 +333,7 @@ void handle_cpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
  * 'child' can only be NULL when find_threaded_blocks() always returns one or more blocks
  */
 template<typename SelfType, typename EngineType>
-void handle_gpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const ConfigParser &config, Statistics &stat,
+void handle_gpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const ConfigParser &config, Statistics &stat,
                           FuseCache &fcache, component::ComponentFace *child) {
     using namespace std;
 
@@ -341,17 +346,13 @@ void handle_gpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
     const uint64_t parallel_threshold = config.defaultGet<uint64_t>("parallel_threshold", 1000);
 
     // Some statistics
-    stat.record(bhir->instr_list);
+    stat.record(*bhir);
 
     // Let's start by cleanup the instructions from the 'bhir'
     vector<bh_instruction*> instr_list;
     {
-        set<bh_base*> syncs;
         set<bh_base*> frees;
-        instr_list = remove_non_computed_system_instr(bhir->instr_list, syncs, frees);
-
-        // Let's copy sync'ed arrays back to the host
-        engine.copyToHost(syncs);
+        instr_list = remove_non_computed_system_instr(bhir->instr_list, frees);
 
         // Let's free device buffers and array memory
         for(bh_base *base: frees) {
@@ -387,6 +388,8 @@ void handle_gpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
         // Find the parallel blocks
         const vector<const LoopB*> threaded_blocks = find_threaded_blocks(block, stat, parallel_threshold);
 
+
+
         // We might have to offload the execution to the CPU
         if (threaded_blocks.size() == 0 and kernel_is_computing) {
             if (verbose)
@@ -411,7 +414,7 @@ void handle_gpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
             for (const InstrPtr &instr: block.getAllInstr()) {
                 child_instr_list.push_back(*instr);
             }
-            bh_ir tmp_bhir(child_instr_list.size(), &child_instr_list[0]);
+            BhIR tmp_bhir(std::move(child_instr_list), bhir->getSyncs());
             child->execute(&tmp_bhir);
             stat.time_offload += chrono::steady_clock::now() - toffload;
             continue;
@@ -424,8 +427,10 @@ void handle_gpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
             engine.copyToDevice(symbols.getParams());
 
             // Code generation
+            const auto tcodegen = chrono::steady_clock::now();
             stringstream ss;
             self.write_kernel(block, symbols, config, threaded_blocks, ss);
+            stat.time_codegen += chrono::steady_clock::now() - tcodegen;
 
             // Create the constant vector
             vector<const bh_instruction*> constants;
@@ -439,7 +444,7 @@ void handle_gpu_execution(SelfType &self, bh_ir *bhir, EngineType &engine, const
         }
 
         // Let's copy sync'ed arrays back to the host
-        engine.copyToHost(symbols.getSyncs());
+        engine.copyToHost(bhir->getSyncs());
 
         // Let's free device buffers
         for(bh_base *base: symbols.getFrees()) {

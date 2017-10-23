@@ -188,7 +188,8 @@ static int _mremap_data(void *dst, void *src, npy_intp size) {
         int errsv = errno; // mremap() sets the errno.
         PyErr_Format(
             PyExc_RuntimeError,
-            "Error - could not mremap a data region. Returned error code by mremap(): %s.\n",
+            "Error - could not mremap a data region (src: %p, dst: %p, size: %ld). Returned error code by mremap(): %s.\n",
+            src, dst, size,
             strerror(errsv)
         );
         return -1;
@@ -1105,7 +1106,48 @@ static PyObject* BhArray_Repr(PyObject *self) {
         return NULL;
     }
 
-    PyObject *str = PyArray_Type.tp_repr(t);
+    PyObject *str = NULL;
+
+    BH_PyArrayObject *base = &((BhArray*) self)->base;
+    if (base->nd == 0) {
+        // 0-rank array -> single value
+        void *data = PyArray_GetPtr((PyArrayObject*) self, 0);
+        char c[32];
+
+        switch (base->descr->type) {
+            case 'i': // int32
+                snprintf(c, sizeof(c), "%d", *((npy_int*) data));
+                break;
+            case 'l': // int64
+                snprintf(c, sizeof(c), "%ld", *((npy_long*) data));
+                break;
+            case 'I': // uint32
+                 snprintf(c, sizeof(c), "%u", *((npy_uint*) data));
+                break;
+            case 'L': // uint64
+                 snprintf(c, sizeof(c), "%lu", *((npy_ulong*) data));
+                break;
+            case 'f': // float
+                snprintf(c, sizeof(c), "%.6g", *((npy_float*) data));
+                break;
+            case 'd': // double
+                snprintf(c, sizeof(c), "%.6g", *((npy_double*) data));
+                break;
+        }
+
+        if (c[0] == 0) {
+            str = PyArray_Type.tp_repr(t);
+        } else {
+#if defined(NPY_PY3K)
+            str = PyUnicode_FromString(c);
+#else
+            str = PyString_FromString(c);
+#endif
+        }
+    } else {
+        str = PyArray_Type.tp_repr(t);
+    }
+
     Py_DECREF(t);
 
     return str;

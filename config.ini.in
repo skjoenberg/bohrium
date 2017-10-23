@@ -7,11 +7,14 @@
 #     The bridge is never part of the list                               #
 ##########################################################################
 [stacks]
-default    = bcexp_cpu, bccon, node, openmp
+default    = bcexp_cpu, bccon, node, fortran
 openmp     = bcexp_cpu, bccon, node, openmp
 opencl     = bcexp_gpu, bccon, node, opencl, openmp
 cuda       = bcexp_gpu, bccon, node, cuda, openmp
 fortran    = bcexp_cpu, bccon, node, fortran
+proxy_openmp = bcexp_cpu, bccon, proxy, node, openmp
+proxy_opencl = bcexp_cpu, bccon, proxy, node, opencl, openmp
+proxy_cuda   = bcexp_cpu, bccon, proxy, node, cuda, openmp
 
 ############
 # Managers #
@@ -90,14 +93,16 @@ compiler_cmd = "${VE_OPENMP_COMPILER_CMD} ${VE_OPENMP_COMPILER_FLG} ${VE_OPENMP_
 compiler_openmp = ${_VE_OPENMP_COMPILER_OPENMP}
 compiler_openmp_simd = ${_VE_OPENMP_COMPILER_OPENMP_SIMD}
 # List of extension methods
-libs = ${OPENMP_LIBS}
+libs = ${BH_OPENMP_LIBS}
 # The pre-fuser to use
 pre_fuser = pre_fuser_lossy
 # List of instruction fuser/transformers
 fuser_list = greedy, collapse_redundant_axes
+# Number of edges in the fusion graph that makes the greedy fuser use the `reshapable_first` fuser instead
+greedy_threshold = 10000
 # *_as_var specifies whether to hard-code variables or have them as variables
 index_as_var = true
-strides_as_variables = true
+strides_as_var = true
 const_as_var = true
 # Monolithic combines all blocks into one shared library rather than a block-nest per shared library
 monolithic = false
@@ -121,14 +126,16 @@ platform_no = -1
 # Additional options given to the opencl compiler. See documentation for clBuildProgram
 compiler_flg = "${VE_OPENMP_COMPILER_INC}"
 # List of extension methods
-libs = ${OPENCL_LIBS}
+libs = ${BH_OPENCL_LIBS}
 # The pre-fuser to use
 pre_fuser = pre_fuser_lossy
 # List of instruction fuser/transformers
 fuser_list = greedy, push_reductions_inwards, split_for_threading, collapse_redundant_axes
+# Number of edges in the fusion graph that makes the greedy fuser use the `reshapable_first` fuser instead
+greedy_threshold = 10000
 # *_as_var specifies whether to hard-code variables or have them as variables
 index_as_var = true
-strides_as_variables = true
+strides_as_var = true
 const_as_var = true
 # OpenCL work group sizes
 work_group_size_1dx = 128
@@ -159,9 +166,11 @@ libs = ${CUDA_LIBS}
 pre_fuser = pre_fuser_lossy
 # List of instruction fuser/transformers
 fuser_list = greedy, push_reductions_inwards, split_for_threading, collapse_redundant_axes
+# Number of edges in the fusion graph that makes the greedy fuser use the `reshapable_first` fuser instead
+greedy_threshold = 10000
 # *_as_var specifies whether to hard-code variables or have them as variables
 index_as_var = false
-strides_as_variables = false
+strides_as_var = false
 const_as_var = false
 # CUDA work group sizes
 work_group_size_1dx = 128
