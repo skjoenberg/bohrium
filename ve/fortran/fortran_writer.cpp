@@ -142,12 +142,15 @@ void FortranWriter::write_header(const SymbolTable &symbols, Scope &scope, const
     }
 
 
-    const string tmp_str = tmp.str();
+    string tmp_str = tmp.str();
     if(not tmp_str.empty()) {
         spaces(4 + block.rank*4);
         ss << "!$OMP" << tmp_str;
         endl();
         footer.push(write_spaces(4 + block.rank*4) + "!$OMP END" + tmp_foot.str());
+        should_print.push(true);
+    } else {
+        should_print.push(false);
     }
 }
 

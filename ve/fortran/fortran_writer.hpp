@@ -7,15 +7,18 @@
 #include <jitk/writer.hpp>
 
 #include "fortran_instruction.hpp"
+//#include "fortran_util.hpp"
 
 using namespace bohrium;
 using namespace jitk;
 using namespace std;
 
+
+
 class FortranWriter : public Writer {
 private:
     stack<string> footer;
-
+    stack<bool> should_print;
     string write_spaces(int spacing) {
         stringstream out;
         for (int i = 0; i < spacing; i++) {
@@ -60,11 +63,13 @@ public:
     void end_loop() {
         ss << "END DO";
         endl();
-        if (not footer.empty()) {
+        bool sp = (not should_print.empty()) and should_print.top();
+        if (sp) {
             ss << footer.top();
             endl();
             footer.pop();
         }
+        should_print.pop();
     }
 
     /*
