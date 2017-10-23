@@ -344,7 +344,6 @@ void write_loop_block(const SymbolTable &symbols,
         }
         writer->spaces(4+block.rank*4);
         writer->end_loop();
-        //writer->spaces(4 + block.rank*4);
     }
 
     // Write the for-loop header
