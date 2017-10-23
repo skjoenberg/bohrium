@@ -22,7 +22,7 @@ string OpenMPWriter::write_array_subscription(const Scope &scope, const bh_view 
         }
     }
     out << "[";
-    if (scope.strides_as_variables and scope.isArray(view) and scope.symbols.existOffsetStridesID(view)) {
+    if (scope.strides_as_var and scope.isArray(view) and scope.symbols.existOffsetStridesID(view)) {
         out << write_array_index_variables(scope, view, hidden_axis, axis_offset);
     } else {
         out << write_array_index(scope, view, hidden_axis, axis_offset);

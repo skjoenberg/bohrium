@@ -64,7 +64,7 @@ class Impl : public ComponentImpl {
                             stat(config.defaultGet("prof", false)),
                             fcache(stat), engine(config, stat) {}
     ~Impl();
-    void execute(bh_ir *bhir);
+    void execute(BhIR *bhir);
     void extmethod(const string &name, bh_opcode opcode) {
         // ExtmethodFace does not have a default or copy constructor thus
         // we have to use its move constructor.
@@ -72,8 +72,8 @@ class Impl : public ComponentImpl {
     }
 
     // Implement the handle of extension methods
-    void handle_extmethod(bh_ir *bhir) {
-        util_handle_extmethod(this, bhir, extmethods);
+    void handle_extmethod(BhIR *bhir) {
+        util_handle_extmethod(this, bhir, extmethods, stat);
     }
 
     // The following methods implements the methods required by jitk::handle_gpu_execution()
@@ -236,9 +236,9 @@ void Impl::write_kernel(const vector<Block> &block_list, const SymbolTable &symb
     ss << "END SUBROUTINE LAUNCHER\n\n";
 }
 
-void Impl::execute(bh_ir *bhir) {
+void Impl::execute(BhIR *bhir) {
     // Let's handle extension methods
-    util_handle_extmethod(this, bhir, extmethods);
+    util_handle_extmethod(this, bhir, extmethods, stat);
 
     // And then the regular instructions
     handle_cpu_execution(*this, bhir, engine, config, stat, fcache);
