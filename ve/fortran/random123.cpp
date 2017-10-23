@@ -24,8 +24,6 @@ If not, see <http://www.gnu.org/licenses/>.
 
 extern "C" {
     __int128 random123(uint64_t* start, uint64_t* key, uint64_t* index) {
-        __int128 lol = random123_wrap(*start, *key, *index);
-        printf("i: %ld,v: %lu\n", *index, lol);
         return random123_wrap(*start, *key, *index);
     }
 }
