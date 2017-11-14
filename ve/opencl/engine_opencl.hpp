@@ -30,6 +30,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <bh_view.hpp>
 #include <jitk/statistics.hpp>
 #include <jitk/codegen_util.hpp>
+#include <boost/filesystem.hpp>
 
 #include "cl.hpp"
 
@@ -64,6 +65,8 @@ private:
     std::map<bh_base*, std::unique_ptr<cl::Buffer> > buffers;
     // Verbose flag
     const bool verbose;
+    // Maximum number of cache files
+    const int64_t cache_file_max;
     // Some statistics
     jitk::Statistics &stat;
     // Record profiling statistics

@@ -39,6 +39,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <jitk/base_db.hpp>
 #include <jitk/instruction.hpp>
 #include <jitk/fuser_cache.hpp>
+#include <jitk/codegen_cache.hpp>
 #include <jitk/apply_fusion.hpp>
 #include <jitk/statistics.hpp>
 
@@ -65,6 +66,10 @@ boost::filesystem::path get_tmp_path(const ConfigParser &config);
 // Tries five times to create directories recursively
 // Useful when multiple processes runs on the same filesystem
 void create_directories(const boost::filesystem::path &path);
+
+// Order all sweep instructions by the viewID of their first operand.
+// This makes the source of the kernels more identical, which improve the code and compile caches.
+std::vector<InstrPtr> order_sweep_set(const std::set<InstrPtr> &sweep_set, const SymbolTable &symbols);
 
 // Calculate the work group sizes.
 // Return pair (global work size, local work size)
@@ -200,6 +205,10 @@ void handle_cpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
     const bool index_as_var = config.defaultGet<bool>("index_as_var", true);
     const bool const_as_var = config.defaultGet<bool>("const_as_var", true);
     const bool monolithic = config.defaultGet<bool>("monolithic", false);
+    const bool use_volatile = config.defaultGet<bool>("use_volatile", false);
+
+    // The codegen cache
+    static CodegenCache codegen_cache(stat);
 
     // Some statistics
     stat.record(*bhir);
@@ -258,17 +267,11 @@ void handle_cpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
         }
 
         // Let's create the symbol table for the kernel
-        const SymbolTable symbols(all_instr, all_non_temps, strides_as_var, index_as_var, const_as_var);
+        const SymbolTable symbols(all_instr, all_non_temps, strides_as_var, index_as_var, const_as_var, use_volatile);
         stat.record(symbols);
 
         // Let's execute the kernel
         if (kernel_is_computing) { // We can skip this step if the kernel does no computation
-            // Code generation
-            const auto tcodegen = chrono::steady_clock::now();
-            stringstream ss;
-            self.write_kernel(block_list, symbols, config, kernel_temps, ss);
-            stat.time_codegen += chrono::steady_clock::now() - tcodegen;
-
             // Create the constant vector
             vector<const bh_instruction*> constants;
             constants.reserve(symbols.constIDs().size());
@@ -276,8 +279,28 @@ void handle_cpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
                 constants.push_back(&(*instr));
             }
 
-            // Let's execute the kernel
-            engine.execute(ss.str(), symbols.getParams(), symbols.offsetStrideViews(), constants);
+            const auto lookup = codegen_cache.get(block_list, symbols);
+            if(lookup.second) {
+                // In debug mode, we check that the cached source code is correct
+                #ifndef NDEBUG
+                    stringstream ss;
+                    self.write_kernel(block_list, symbols, config, kernel_temps, ss);
+                    if (ss.str().compare(lookup.first) != 0) {
+                        cout << "\nCached source code: \n" << lookup.first;
+                        cout << "\nReal source code: \n" << ss.str();
+                        assert(1 == 2);
+                    }
+                #endif
+                engine.execute(lookup.first, symbols.getParams(), symbols.offsetStrideViews(), constants);
+            } else {
+                const auto tcodegen = chrono::steady_clock::now();
+                stringstream ss;
+                self.write_kernel(block_list, symbols, config, kernel_temps, ss);
+                string source = ss.str();
+                stat.time_codegen += chrono::steady_clock::now() - tcodegen;
+                engine.execute(source, symbols.getParams(), symbols.offsetStrideViews(), constants);
+                codegen_cache.insert(std::move(source), block_list, symbols);
+            }
         }
 
         // Finally, let's cleanup
@@ -291,16 +314,11 @@ void handle_cpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
 
             // Let's create the symbol table for the kernel
             const SymbolTable symbols(block.getAllInstr(), block.getLoop().getAllNonTemps(), strides_as_var,
-                                      index_as_var, const_as_var);
+                                      index_as_var, const_as_var, use_volatile);
             stat.record(symbols);
 
             // Let's execute the kernel
             if (not block.isSystemOnly()) { // We can skip this step if the kernel does no computation
-                // Code generation
-                const auto tcodegen = chrono::steady_clock::now();
-                stringstream ss;
-                self.write_kernel({block}, symbols, config, {}, ss);
-                stat.time_codegen += chrono::steady_clock::now() - tcodegen;
 
                 // Create the constant vector
                 vector<const bh_instruction*> constants;
@@ -308,9 +326,28 @@ void handle_cpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
                 for (const InstrPtr &instr: symbols.constIDs()) {
                     constants.push_back(&(*instr));
                 }
-
-                // Let's execute the kernel
-                engine.execute(ss.str(), symbols.getParams(), symbols.offsetStrideViews(), constants);
+                const auto lookup = codegen_cache.get({block}, symbols);
+                if(lookup.second) {
+                    // In debug mode, we check that the cached source code is correct
+                    #ifndef NDEBUG
+                        stringstream ss;
+                        self.write_kernel({block}, symbols, config, {}, ss);
+                        if (ss.str().compare(lookup.first) != 0) {
+                            cout << "\nCached source code: \n" << lookup.first;
+                            cout << "\nReal source code: \n" << ss.str();
+                            assert(1 == 2);
+                        }
+                    #endif
+                    engine.execute(lookup.first, symbols.getParams(), symbols.offsetStrideViews(), constants);
+                } else {
+                    const auto tcodegen = chrono::steady_clock::now();
+                    stringstream ss;
+                    self.write_kernel({block}, symbols, config, {}, ss);
+                    string source = ss.str();
+                    stat.time_codegen += chrono::steady_clock::now() - tcodegen;
+                    engine.execute(source, symbols.getParams(), symbols.offsetStrideViews(), constants);
+                    codegen_cache.insert(std::move(source), {block}, symbols);
+                }
             }
 
             // Finally, let's cleanup
@@ -343,7 +380,11 @@ void handle_gpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
     const bool strides_as_var = config.defaultGet<bool>("strides_as_var", true);
     const bool index_as_var = config.defaultGet<bool>("index_as_var", true);
     const bool const_as_var = config.defaultGet<bool>("const_as_var", true);
+    const bool use_volatile = config.defaultGet<bool>("use_volatile", false);
     const uint64_t parallel_threshold = config.defaultGet<uint64_t>("parallel_threshold", 1000);
+
+    // The codegen cache
+    static CodegenCache codegen_cache(stat);
 
     // Some statistics
     stat.record(*bhir);
@@ -379,7 +420,7 @@ void handle_gpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
 
         // Let's create the symbol table for the kernel
         const SymbolTable symbols(block.getAllInstr(), block.getLoop().getAllNonTemps(), strides_as_var,
-                                  index_as_var, const_as_var);
+                                  index_as_var, const_as_var, use_volatile);
         stat.record(symbols);
 
         // We can skip a lot of steps if the kernel does no computation
@@ -387,8 +428,6 @@ void handle_gpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
 
         // Find the parallel blocks
         const vector<const LoopB*> threaded_blocks = find_threaded_blocks(block, stat, parallel_threshold);
-
-
 
         // We might have to offload the execution to the CPU
         if (threaded_blocks.size() == 0 and kernel_is_computing) {
@@ -426,12 +465,6 @@ void handle_gpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
             // We need a memory buffer on the device for each non-temporary array in the kernel
             engine.copyToDevice(symbols.getParams());
 
-            // Code generation
-            const auto tcodegen = chrono::steady_clock::now();
-            stringstream ss;
-            self.write_kernel(block, symbols, config, threaded_blocks, ss);
-            stat.time_codegen += chrono::steady_clock::now() - tcodegen;
-
             // Create the constant vector
             vector<const bh_instruction*> constants;
             constants.reserve(symbols.constIDs().size());
@@ -439,8 +472,29 @@ void handle_gpu_execution(SelfType &self, BhIR *bhir, EngineType &engine, const 
                 constants.push_back(&(*instr));
             }
 
-            // Let's execute the kernel
-            engine.execute(ss.str(), symbols.getParams(), threaded_blocks, symbols.offsetStrideViews(), constants);
+            const auto lookup = codegen_cache.get({block}, symbols);
+            if(lookup.second) {
+                // In debug mode, we check that the cached source code is correct
+                #ifndef NDEBUG
+                    stringstream ss;
+                    self.write_kernel(block, symbols, config, threaded_blocks, ss);
+                    if (ss.str().compare(lookup.first) != 0) {
+                        cout << "\nCached source code: \n" << lookup.first;
+                        cout << "\nReal source code: \n" << ss.str();
+                        assert(1 == 2);
+                    }
+                #endif
+                engine.execute(lookup.first, symbols.getParams(), threaded_blocks, symbols.offsetStrideViews(),
+                               constants);
+            } else {
+                const auto tcodegen = chrono::steady_clock::now();
+                stringstream ss;
+                self.write_kernel(block, symbols, config, threaded_blocks, ss);
+                string source = ss.str();
+                stat.time_codegen += chrono::steady_clock::now() - tcodegen;
+                engine.execute(source, symbols.getParams(), threaded_blocks, symbols.offsetStrideViews(), constants);
+                codegen_cache.insert(std::move(source), {block}, symbols);
+            }
         }
 
         // Let's copy sync'ed arrays back to the host

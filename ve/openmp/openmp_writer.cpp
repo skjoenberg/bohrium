@@ -1,6 +1,7 @@
 #include <string>
 #include <sstream>
 #include <jitk/base_db.hpp>
+#include <jitk/codegen_util.hpp>
 #include "openmp_writer.hpp"
 #include "openmp_util.hpp"
 
@@ -22,7 +23,7 @@ string OpenMPWriter::write_array_subscription(const Scope &scope, const bh_view 
         }
     }
     out << "[";
-    if (scope.strides_as_var and scope.isArray(view) and scope.symbols.existOffsetStridesID(view)) {
+    if (scope.symbols.strides_as_var and scope.symbols.existOffsetStridesID(view)) {
         out << write_array_index_variables(scope, view, hidden_axis, axis_offset);
     } else {
         out << write_array_index(scope, view, hidden_axis, axis_offset);
@@ -87,12 +88,16 @@ void OpenMPWriter::write_header(const SymbolTable &symbols, Scope &scope, const 
     // All reductions that can be handle directly be the OpenMP header e.g. reduction(+:var)
     vector<InstrPtr> openmp_reductions;
 
+    // Order all sweep instructions by the viewID of their first operand.
+    // This makes the source of the kernels more identical, which improve the code and compile caches.
+    const vector<InstrPtr> ordered_block_sweeps = order_sweep_set(block._sweeps, symbols);
+
     stringstream tmp;
     // "OpenMP for" goes to the outermost loop
     if (block.rank == 0 and openmp_compatible(block)) {
         tmp << " parallel for";
         // Since we are doing parallel for, we should either do OpenMP reductions or protect the sweep instructions
-        for (const InstrPtr &instr: block._sweeps) {
+        for (const InstrPtr &instr: ordered_block_sweeps) {
             assert(instr->operand.size() == 3);
             const bh_view &view = instr->operand[0];
             if (openmp_reduce_compatible(instr->opcode) and (scope.isScalarReplaced(view) or scope.isTmp(view.base))) {
@@ -109,7 +114,7 @@ void OpenMPWriter::write_header(const SymbolTable &symbols, Scope &scope, const 
     if (enable_simd and block.isInnermost() and simd_compatible(block, scope)) {
         tmp << " simd";
         if (block.rank > 0) { //NB: avoid multiple reduction declarations
-            for (const InstrPtr instr: block._sweeps) {
+            for (const InstrPtr &instr: ordered_block_sweeps) {
                 openmp_reductions.push_back(instr);
             }
         }
@@ -131,7 +136,7 @@ void OpenMPWriter::write_header(const SymbolTable &symbols, Scope &scope, const 
 }
 
 void OpenMPWriter::loop_head_writer(const SymbolTable &symbols, Scope &scope, const LoopB &block, const ConfigParser &config,
-                                     bool loop_is_peeled, const vector<const LoopB *> &threaded_blocks) {
+                                    bool loop_is_peeled, const vector<const LoopB *> &threaded_blocks) {
     // Let's write the OpenMP loop header
     {
         int64_t for_loop_size = block.size;

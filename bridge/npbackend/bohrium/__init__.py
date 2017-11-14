@@ -26,13 +26,16 @@ from . import linalg
 from .linalg import matmul, dot, tensordot
 from .summations import *
 from .disk_io import *
+from .ufuncs import _handle__array_ufunc__
 from . import contexts
 from . import bh_info
 from . import interop_pyopencl
 from . import interop_pycuda
 from . import interop_numpy
 from . import backend_messaging
+from .loop import do_while
 from .nobh import bincount
+from .contexts import EnableBohrium as Enable, DisableBohrium as Disable
 
 # In NumPy `correlate` and `convolve` only handles 1D arrays whereas in SciPy they handles ND arrays.
 # However, NumPy and SciPy's functionality differ! Thus, the ND version cannot replace NumPy's 1D version.
@@ -106,3 +109,4 @@ if sys.version_info[0] < 3:
 from . import bohriumify
 
 bohriumify.modules()
+
