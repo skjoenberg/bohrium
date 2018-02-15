@@ -278,3 +278,29 @@ PyObject* PyMessage(PyObject *self, PyObject *args, PyObject *kwds) {
     return PyString_FromString(bhc_message(msg));
 #endif
 }
+
+/*  PyObject* PyIncOff(PyObject *self, PyObject *args, PyObject *kwds) { *\/ */
+/*      PyObject *ary; *\/ */
+/*      static char *kwlist[] = {"ary", NULL}; *\/ */
+/*      if (!PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &ary)) { *\/ */
+/*          return NULL; *\/ */
+/*      } *\/ */
+
+/*     bhc_dtype type; */
+/*     bhc_bool constant; */
+/*     void *operand; */
+/*     normalize_cleanup_handle cleanup; */
+/*     cleanup.objs2free_count = 0; */
+/*     int err = normalize_operand(ary, &type, &constant, &operand, &cleanup); */
+/*     if (err != -1) { */
+/*         normalize_operand_cleanup(&cleanup); */
+/*         if (PyErr_Occurred() != NULL) { */
+/*             return NULL; */
+/*         } else { */
+/*             Py_RETURN_NONE; */
+/*         } */
+/*     } */
+/*     bhc_inc_off(type, operand); */
+/*     normalize_operand_cleanup(&cleanup); */
+/*     Py_RETURN_NONE; */
+/* } */

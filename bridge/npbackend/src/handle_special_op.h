@@ -88,3 +88,5 @@ PyObject* PyGetDeviceContext(PyObject *self, PyObject *args);
  * @return     The message answer from the bhc runtime
  */
 PyObject* PyMessage(PyObject *self, PyObject *args, PyObject *kwds);
+
+/* PyObject* PyIncOff(PyObject *self, PyObject *args, PyObject *kwds); */

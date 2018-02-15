@@ -955,7 +955,9 @@ static PyMethodDef _bhMethods[] = {
     {"get_device_context", PyGetDeviceContext,  METH_NOARGS,
             "Get the device context, such as OpenCL's cl_context, of the first VE in the runtime stack"},
     {"message", (PyCFunction) PyMessage, METH_VARARGS | METH_KEYWORDS,
-            "Send and receive a message through the Bohrium stack\n"},
+     "Send and receive a message through the Bohrium stack\n"},
+    /* {"inc_off", (PyCFunction) PyIncOff, METH_VARARGS | METH_KEYWORDS, *\/ */
+    /*         "Increate offset of array by one.\n"}, *\/ */
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 

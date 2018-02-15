@@ -100,9 +100,9 @@ protected:
 
         for (const bh_view *view: symbols.offsetStrideViews()) {
             stmp << writeType(bh_type::UINT64);
-            stmp << " vo" << symbols.offsetStridesID(*view) << ", ";
+            stmp << "* vo" << symbols.offsetStridesID(*view) << ", ";
             for (int i = 0; i < view->ndim; ++i) {
-                stmp << writeType(bh_type::UINT64) << " vs" << symbols.offsetStridesID(*view) << "_" << i << ", ";
+                stmp << writeType(bh_type::UINT64) << "* vs" << symbols.offsetStridesID(*view) << "_" << i << ", ";
             }
         }
 

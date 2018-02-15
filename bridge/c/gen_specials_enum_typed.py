@@ -126,6 +126,18 @@ def main(args):
     }
 }\n"""
 
+#     doc = "\n// Increases the offset of the array on one.\n"
+#     impl += doc; head += doc
+#     decl = "void bhc_inc_off(bhc_dtype dtype, const void *ary)"
+#     head += "DLLEXPORT %s;\n" % decl
+#     impl += """%s
+# {
+#     switch(dtype) {\n""" % decl
+#     for key, t in type_map.items():
+#         impl += "        case %s: bhc_inc_off_A%s((%s)ary); break;\n" % (key, t['name'], t['bhc_ary'])
+#     impl += """        default: fprintf(stderr, "bhc_inc_off(): unknown dtype\\n"); exit(-1);
+#     }
+# }\n"""
 
     #Let's add header and footer
     head = """/* Bohrium C Bridge: special functions. Auto generated! */

@@ -528,6 +528,11 @@ void write_operation(const bh_instruction &instr, const vector<string> &ops, str
         case BH_COND_SCATTER:
             out << "if (" << ops[2] << ") { " << ops[0] << " = " << ops[1] << "; }";
             break;
+        case BH_INC_OFF:
+            out << "(*vo1)=(*vo1)+1;\n";
+            out << "printf(\"%lu\\n\", *vo1);\n";
+            //            out << ops[0] << "+=1;";
+            break;
         default:
             cerr << "Instruction \"" << instr << "\" not supported\n";
             throw runtime_error("Instruction not supported.");
@@ -583,14 +588,14 @@ void write_range_instr(const Scope &scope, const bh_instruction &instr, stringst
     stringstream ss;
     ss << "(";
     if (scope.symbols.strides_as_var) {
-        ss << "vo" << scope.symbols.offsetStridesID(instr.operand[0]);
+        ss << "(*vo)" << scope.symbols.offsetStridesID(instr.operand[0]);
     } else {
         ss << instr.operand[0].start;
     }
     for(int64_t i=0; i < instr.operand[0].ndim; ++i) {
         ss << "+ i" << i << " * ";
         if (scope.symbols.strides_as_var) {
-            ss << " vs" << scope.symbols.offsetStridesID(instr.operand[0]) << "_" << i;
+            ss << " (*vs)" << scope.symbols.offsetStridesID(instr.operand[0]) << "_" << i;
         } else {
             ss << " " << instr.operand[0].stride[i];
         }
@@ -619,14 +624,14 @@ void write_random_instr(const Scope &scope, const bh_instruction &instr, strings
 
     // Let's find the flatten index of the output view
     if (scope.symbols.strides_as_var) {
-        ss << "vo" << scope.symbols.offsetStridesID(instr.operand[0]);
+        ss << "(*vo" << scope.symbols.offsetStridesID(instr.operand[0]) << ")";
     } else {
         ss << instr.operand[0].start;
     }
     for(int64_t i=0; i < instr.operand[0].ndim; ++i) {
         ss << " + i" << i << " * ";
         if (scope.symbols.strides_as_var) {
-            ss << " vs" << scope.symbols.offsetStridesID(instr.operand[0]) << "_" << i;
+            ss << " (*vs" << scope.symbols.offsetStridesID(instr.operand[0]) << "_" << i << ")";
         } else {
             ss << " " << instr.operand[0].stride[i];
         }
@@ -728,6 +733,12 @@ void write_other_instr(const Scope &scope, const bh_instruction &instr, stringst
     write_operation(instr, ops, out, opencl);
 }
 
+void write_offset_instr(const Scope &scope, const bh_instruction &instr, stringstream &out, bool opencl) {
+    size_t off_id = scope.symbols.offsetStridesID(instr.operand[0]);
+    out << "(*vo" << off_id << ")+=1;\n";
+    out << "printf(\"%lu\\n\", *vo" << off_id << ");\n";
+}
+
 void write_instr(const Scope &scope, const bh_instruction &instr, stringstream &out, bool opencl) {
     if (bh_opcode_is_system(instr.opcode)) {
         return;
@@ -746,6 +757,9 @@ void write_instr(const Scope &scope, const bh_instruction &instr, stringstream &
         case BH_SCATTER:
         case BH_COND_SCATTER:
             write_scatter_instr(scope, instr, out, opencl);
+            break;
+        case BH_INC_OFF:
+            write_offset_instr(scope, instr, out, opencl);
             break;
         default:
             if (bh_opcode_is_accumulate(instr.opcode)) {
@@ -803,6 +817,10 @@ vector<bh_instruction*> remove_non_computed_system_instr(vector<bh_instruction> 
     for (bh_instruction &instr: instr_list) {
         if (instr.opcode == BH_FREE and not util::exist(computes, instr.operand[0].base)) {
             frees.insert(instr.operand[0].base);
+            //        } else if (instr.opcode == BH_INC_OFF) {
+            //            write_offset_instr(scope, instr, out, opencl);
+            //                cout << "\n\nLOOOOOOLZZZZZ\n\n" << endl;
+            ret.push_back(&instr);
         } else if (not (instr.opcode == BH_NONE or instr.opcode == BH_TALLY)) {
             set<const bh_base*> bases = instr.get_bases_const();
             computes.insert(bases.begin(), bases.end());

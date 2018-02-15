@@ -8,6 +8,8 @@ import numpy_force as numpy
 from . import _bh
 from . import bhary
 from . import array_create
+from . import ufuncs
+from . import _info
 
 
 def do_while(func, niters, *args, **kwargs):
@@ -76,11 +78,9 @@ def do_while(func, niters, *args, **kwargs):
 def for_loop(loop_body, niters, offset, stride, *args, **kwargs):
     if niters < 1: return
 
-    offset_arr = array_create.array([offset])
-    args = args + (offset_arr,)
-    runtime_flush()
-
+    _bh.flush()
     loop_body(*args, **kwargs)
-    offset_arr[0] += stride
+    _bh.flush_and_repeat(niters, None)
 
-    runtime_flush_and_repeat(niters, None)
+def inc(*args, **kwargs):
+    _bh.ufunc(85, args)

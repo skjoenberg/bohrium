@@ -2147,5 +2147,35 @@
     "reduction":     false,
     "accumulate":    false,
     "system_opcode": false
+},
+{
+    "opcode": "BH_INC_OFF",
+    "doc":  "Increate the offset of the array by one.",
+    "code": "bh_inc_off(op1)",
+    "id":   "85",
+    "nop":   1,
+    "types": [
+        [ "BH_BOOL" ],
+        [ "BH_COMPLEX128" ],
+        [ "BH_COMPLEX64" ],
+        [ "BH_FLOAT32" ],
+        [ "BH_FLOAT64" ],
+        [ "BH_INT16" ],
+        [ "BH_INT32" ],
+        [ "BH_INT64" ],
+        [ "BH_INT8" ],
+        [ "BH_UINT16" ],
+        [ "BH_UINT32" ],
+        [ "BH_UINT64" ],
+        [ "BH_UINT8" ]
+    ],
+    "layout": [
+        [ "A" ]
+    ],
+    "elementwise":   false,
+    "composite":     false,
+    "reduction":     false,
+    "accumulate":    false,
+    "system_opcode": false
 }
 ]

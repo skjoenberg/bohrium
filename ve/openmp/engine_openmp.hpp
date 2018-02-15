@@ -41,6 +41,7 @@ typedef void (*KernelFunction)(void* data_list[], uint64_t offset_strides[], bh_
 
 class EngineOpenMP : public jitk::EngineCPU {
 private:
+    std::vector<uint64_t> cache_offset_and_strides;
     std::map<uint64_t, KernelFunction> _functions;
     std::vector<void*> _lib_handles;
 

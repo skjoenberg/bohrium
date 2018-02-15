@@ -184,14 +184,15 @@ void EngineOpenMP::execute(const std::string &source,
     }
 
     // And the offset-and-strides
-    vector<uint64_t> offset_and_strides;
-    offset_and_strides.reserve(offset_strides.size());
-    for (const bh_view *view: offset_strides) {
-        const uint64_t t = (uint64_t) view->start;
-        offset_and_strides.push_back(t);
-        for (int i=0; i<view->ndim; ++i) {
-            const uint64_t s = (uint64_t) view->stride[i];
-            offset_and_strides.push_back(s);
+    if (cache_offset_and_strides.empty()) {
+        cache_offset_and_strides.reserve(offset_strides.size());
+        for (const bh_view *view: offset_strides) {
+            const uint64_t t = (uint64_t) view->start;
+            cache_offset_and_strides.push_back(t);
+            for (int i=0; i<view->ndim; ++i) {
+                const uint64_t s = (uint64_t) view->stride[i];
+                cache_offset_and_strides.push_back(s);
+            }
         }
     }
 
@@ -204,7 +205,7 @@ void EngineOpenMP::execute(const std::string &source,
 
     auto start_exec = chrono::steady_clock::now();
     // Call the launcher function, which will execute the kernel
-    func(&data_list[0], &offset_and_strides[0], &constant_arg[0]);
+    func(&data_list[0], &cache_offset_and_strides[0], &constant_arg[0]);
     auto texec = chrono::steady_clock::now() - start_exec;
     stat.time_exec += texec;
     stat.time_per_kernel[source_filename].register_exec_time(texec);
@@ -318,6 +319,7 @@ void EngineOpenMP::writeKernel(const std::vector<jitk::Block> &block_list,
     ss << "#include <complex.h>\n";
     ss << "#include <tgmath.h>\n";
     ss << "#include <math.h>\n";
+    ss << "#include <stdio.h>\n";
     if (symbols.useRandom()) { // Write the random function
         ss << "#include <kernel_dependencies/random123_openmp.h>\n";
     }
@@ -374,9 +376,9 @@ void EngineOpenMP::writeKernel(const std::vector<jitk::Block> &block_list,
 
         uint64_t count = 0;
         for (const bh_view *view: symbols.offsetStrideViews()) {
-            stmp << "offset_strides[" << count++ << "], ";
+            stmp << "&offset_strides[" << count++ << "], ";
             for (int i = 0; i<view->ndim; ++i) {
-                stmp << "offset_strides[" << count++ << "], ";
+                stmp << "&offset_strides[" << count++ << "], ";
             }
         }
 

@@ -82,6 +82,22 @@ def main(args):
     return msg_recv.c_str();
 }
 """
+#     doc = "\n// Increases the offset of the array on one.\n"
+#     impl += doc; head += doc
+#     for key, t in type_map.items():
+#         decl = "void bhc_inc_off_A%(name)s(const %(bhc_ary)s ary)" % t
+#         head += "DLLEXPORT %s;\n" % decl
+#         impl += "%s" % decl
+#         impl += """\
+
+# {
+#     bhxx::BhArray<%(cpp)s> *b = ((bhxx::BhArray<%(cpp)s>*)ary);
+#     bhxx::BhInstruction instr(BH_INC_OFF);
+#     instr.appendOperand(b);
+#     bhxx::Runtime::instance().enqueue(instr);
+# }
+
+# """ % t
 
     doc = "\n// Get the device context, such as OpenCL's cl_context, of the first VE in the runtime stack.\n"
     doc += "// If the first VE isn't a device, NULL is returned.\n"

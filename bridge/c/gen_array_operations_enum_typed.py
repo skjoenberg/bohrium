@@ -54,6 +54,7 @@ def main(args):
             continue
 
         impl += "        case %s:\n" % op['opcode'].replace("BH_", "BHC_")
+
         impl += "            switch(signature_hash(%d, types, constants)) {\n" % op['nop']
 
         # Generate a case for each type signature and layout

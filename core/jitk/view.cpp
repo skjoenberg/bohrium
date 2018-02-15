@@ -61,7 +61,7 @@ void write_array_index_variables(const Scope &scope, const bh_view &view, string
                                  int hidden_axis, const pair<int, int> axis_offset) {
 
     // Write view.start using the offset-and-strides variable
-    out << "vo" << scope.symbols.offsetStridesID(view);
+    out << "*vo" << scope.symbols.offsetStridesID(view);
 
     if (not bh_is_scalar(&view)) { // NB: this optimization is required when reducing a vector to a scalar!
         for (int i = 0; i < view.ndim; ++i) {
@@ -74,7 +74,7 @@ void write_array_index_variables(const Scope &scope, const bh_view &view, string
             } else {
                 out << " +i" << t;
             }
-            out << "*vs" << scope.symbols.offsetStridesID(view) << "_" << i;
+            out << "*(*vs" << scope.symbols.offsetStridesID(view) << "_" << i << ")";
         }
     }
 }
@@ -103,4 +103,3 @@ void write_array_subscription(const Scope &scope, const bh_view &view, stringstr
 
 } // jitk
 } // bohrium
-
