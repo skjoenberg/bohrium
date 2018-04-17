@@ -1,8 +1,5 @@
 from . import _bh
 
-
-
-
 def array_iterator(a, s, dim_array_tuple):
     b = a[s]
 
