@@ -224,6 +224,26 @@ def main(args):
 
 """ % t
 
+# !!!!!!!
+    doc = "\n// Changes the offset of a view to the first item in another view.\n"
+    impl += doc; head += doc
+    for key, t in type_map.items():
+        decl = "void bhc_set_start"
+        decl += "_A%(name)s_A%(name)s_Aint64" % t
+        decl += "(const %(bhc_ary)s ary1, const %(bhc_ary)s ary2, const bhc_ndarray_int64_p ary3, size_t dim)" % t
+        head += "DLLEXPORT %s;\n" % decl
+        impl += "%s" % decl
+        impl += """\
+{
+   bhxx::Runtime::instance().set_start(
+        (bhxx::BhArray<%(cpp)s>*) ary1,
+        (bhxx::BhArray<%(cpp)s>*) ary2,
+        (bhxx::BhArray<int64_t>*) ary3,
+        dim);
+}
+
+""" % t
+
     doc = "\n// Extension Method, returns 0 when the extension exist\n"
     impl += doc; head += doc
     for key, t in type_map.items():

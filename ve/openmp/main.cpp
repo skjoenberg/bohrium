@@ -137,18 +137,33 @@ void Impl::execute(BhIR *bhir) {
     bh_base *cond = bhir->getRepeatCondition();
 
     for (uint64_t i = 0; i < bhir->getNRepeats(); ++i) {
+        for (bh_instruction &instr : bhir->instr_list) {
+            for (bh_view &view : instr.operand) {
+                if (not view.index_arrays.empty()) {
+                    view.start = view.orig_offset;
+
+                    for (size_t j=0; j < view.index_arrays.size(); j++) {
+                        int64_t stride = view.orig_strides.at(j);
+                        int64_t idx = *(view.index_arrays.at(j)) * stride;
+                        view.start += idx;
+
+                    }
+                }
+            }
+        }
+
         // Let's handle extension methods
         engine.handleExtmethod(*this, bhir);
 
         // And then the regular instructions
         engine.handleExecution(bhir);
-
         // Check condition
         if (cond != nullptr and cond->data != nullptr and not ((bool*) cond->data)[0]) {
             break;
         }
-
         // Change views that slide between iterations
-        slide_views(bhir);
+        //        slide_views(bhir);
+
+
     }
 }

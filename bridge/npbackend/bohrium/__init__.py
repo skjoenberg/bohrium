@@ -42,6 +42,7 @@ from .loop import do_while
 from .nobh import bincount
 from .contexts import EnableBohrium as Enable, DisableBohrium as Disable
 from ._bh import flush
+from .array_iterator import *
 
 # In NumPy `correlate` and `convolve` only handles 1D arrays whereas in SciPy they handles ND arrays.
 # However, NumPy and SciPy's functionality differ! Thus, the ND version cannot replace NumPy's 1D version.

@@ -62,6 +62,10 @@ struct bh_view {
         slide_dim_shape_change = view.slide_dim_shape_change;
         slide_dim_stride = view.slide_dim_stride;
         slide_dim_shape = view.slide_dim_shape;
+        index_arrays = view.index_arrays;
+        index_dim = view.index_dim;
+        orig_offset = view.orig_offset;
+        orig_strides = view.orig_strides;
 
         std::memcpy(shape, view.shape, ndim * sizeof(int64_t));
         std::memcpy(stride, view.stride, ndim * sizeof(int64_t));
@@ -97,6 +101,17 @@ struct bh_view {
     /// The shape of the given dimension (used for negative indices)
     std::vector<int64_t> slide_dim_shape;
 
+    /// Index arrays
+    std::vector<int64_t*> index_arrays;
+
+    /// Index arrays
+    std::vector<size_t> index_dim;
+
+    /// Starting offset
+    int64_t orig_offset;
+
+    /// Dimension strides
+    std::vector<int64_t> orig_strides;
 
     // Returns a vector of tuples that describe the view using (almost)
     // Python Notation.

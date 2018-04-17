@@ -122,6 +122,20 @@ def main(args):
         impl += "        case %s: bhc_slide_view_A%s_A%s((%s)ary1, (%s)ary2, dim, slide, shape); break;\n" % (key, t['name'], t['name'], t['bhc_ary'], t['bhc_ary'])
     impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
     }
+    }\n"""
+
+# !!!!!!!!!!!!!!
+    doc = "\n// Changes the offset of a view to the first item in another view.\n"
+    impl += doc; head += doc
+    decl = "void bhc_set_start(bhc_dtype dtype, const void *ary1, const void *ary2, const void *ary3, size_t dim)"
+    head += "DLLEXPORT %s;\n" % decl
+    impl += """%s
+{
+    switch(dtype) {\n""" % decl
+    for key, t in type_map.items():
+        impl += "        case %s: bhc_set_start_A%s_A%s_Aint64((%s)ary1, (%s)ary2, (bhc_ndarray_int64_p)ary3, dim); break;\n" % (key, t['name'], t['name'], t['bhc_ary'], t['bhc_ary'])
+    impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
+    }
 }\n"""
 
     doc = "\n// Extension Method, returns 0 when the extension exist\n"

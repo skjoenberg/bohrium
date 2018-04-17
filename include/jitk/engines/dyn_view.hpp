@@ -41,7 +41,6 @@ void slide_views(BhIR *bhir) {
                     }
 
                     view.start += change;
-                    printf("WAAAA %d\n", view.slide_dim_shape_change.at(i));
                     view.shape[dim] += view.slide_dim_shape_change.at(i);
                 }
             }

@@ -207,6 +207,71 @@ PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds) {
     Py_RETURN_NONE;
 }
 
+PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds) {
+    PyObject *ary1;
+    PyObject *ary2;
+    PyObject *ary3;
+    unsigned int dim;
+
+    static char *kwlist[] = {"ary1", "ary2", "ary3", "dim:int", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOOK", kwlist, &ary1, &ary2, &ary3, &dim)) {
+        return NULL;
+    }
+
+    bhc_dtype type1;
+    bhc_bool constant1;
+    void *operand1;
+    normalize_cleanup_handle cleanup1;
+    int err1 = normalize_operand(ary1, &type1, &constant1, &operand1, &cleanup1);
+    cleanup1.objs2free_count = 0;
+    if (err1 == -1) {
+        normalize_operand_cleanup(&cleanup1);
+        if (PyErr_Occurred() != NULL) {
+            return NULL;
+        } else {
+            Py_RETURN_NONE;
+        }
+    }
+
+    bhc_dtype type2;
+    bhc_bool constant2;
+    void *operand2;
+    normalize_cleanup_handle cleanup2;
+    int err2 = normalize_operand(ary2, &type2, &constant2, &operand2, &cleanup2);
+    cleanup2.objs2free_count = 0;
+    if (err2 == -1) {
+        normalize_operand_cleanup(&cleanup2);
+        if (PyErr_Occurred() != NULL) {
+            return NULL;
+        } else {
+            Py_RETURN_NONE;
+        }
+    }
+
+    bhc_dtype type3;
+    bhc_bool constant3;
+    void *operand3;
+    normalize_cleanup_handle cleanup3;
+    int err3 = normalize_operand(ary3, &type3, &constant3, &operand3, &cleanup3);
+    cleanup3.objs2free_count = 0;
+    if (err3 == -1) {
+        normalize_operand_cleanup(&cleanup3);
+        if (PyErr_Occurred() != NULL) {
+            return NULL;
+        } else {
+            Py_RETURN_NONE;
+        }
+    }
+
+    bhc_set_start(type1, operand1, operand2, operand3, dim);
+
+    normalize_operand_cleanup(&cleanup1);
+    normalize_operand_cleanup(&cleanup2);
+    normalize_operand_cleanup(&cleanup3);
+
+    Py_RETURN_NONE;
+}
+
 PyObject* PyRandom123(PyObject *self, PyObject *args, PyObject *kwds) {
     unsigned long long size;
     unsigned long long seed;

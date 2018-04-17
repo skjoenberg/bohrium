@@ -100,6 +100,18 @@ class Runtime {
         slide_view_ptr->slide_dim_shape.push_back(orig_view_ptr->shape[dim]);
     }
 
+    // Change the offset of slide_view_ptr by slide for each iteration of a loopp
+    template <typename T>
+
+    void set_start(BhArray<T>* orig_arr, BhArray<T>* view_arr, BhArray<int64_t>* index_array, size_t dim) {
+        size_t offset = index_array->offset;
+        int64_t* base = (int64_t*) index_array->base.get()->data;
+        int64_t* pointer = &(base[offset]);
+        view_arr->index_arrays.push_back(pointer);
+        view_arr->index_dim.push_back(dim);
+        view_arr->orig_strides.push_back(orig_arr->stride[dim]);
+    }
+
     // Send and receive a message through the component stack
     std::string message(const std::string &msg);
 
