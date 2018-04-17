@@ -49,6 +49,10 @@ PyObject* PySync(PyObject *self, PyObject *args, PyObject *kwds);
 /** Increases `ary`s offset by one */
 PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds);
 
+/** Sets the start of the first array to the first element of second array */
+PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds);
+
+
 /** Create a new flat random array using the random123 algorithm.
     The dtype is uint64 always.
 

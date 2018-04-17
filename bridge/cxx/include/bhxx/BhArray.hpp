@@ -74,6 +74,18 @@ class BhArray {
     // The relevant dimensions
     std::vector<int64_t> slide_dim_shape;
 
+    // Index arrays
+    std::vector<int64_t*> index_arrays;
+
+    // Index arrays
+    std::vector<size_t> index_dim;
+
+    // Starting offset
+    int64_t orig_offset;
+
+    // Dimension strides
+    std::vector<int64_t> orig_strides;
+
     /** Create a new view */
     BhArray(Shape shape_, Stride stride_, const size_t offset_ = 0)
           : offset(offset_),

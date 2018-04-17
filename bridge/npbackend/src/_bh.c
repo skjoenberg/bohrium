@@ -903,6 +903,8 @@ static PyMethodDef _bhMethods[] = {
             "Sync `ary` to host memory."},
     {"slide_view", (PyCFunction) PySlideView, METH_VARARGS | METH_KEYWORDS,
             "Increase `ary`s offset by one."},
+    {"set_start", (PyCFunction) PySetStart, METH_VARARGS | METH_KEYWORDS,
+            "Set the start of one array to the first element of another."},
     {"random123", (PyCFunction) PyRandom123, METH_VARARGS | METH_KEYWORDS,
             "Create a new random array using the random123 algorithm.\n" \
             "The dtype is uint64 always."},
