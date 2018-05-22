@@ -75,6 +75,13 @@ class ViewShape(Exception):
         super(ViewShape, self).__init__(error_msg)
 
 
+class dyn_view(object):
+    def __init__(self, dst=[], sh=None, st=None):
+        self.dim_slide_tuple = dst
+        self.shape = sh
+        self.stride = st
+
+
 def get_iterator(max_iter, val):
     '''Returns an iterator with a given starting value. An iterator behaves like
        an integer, but is used to slide view between loop iterations.
@@ -127,11 +134,13 @@ def has_iterator(*s):
                    isinstance(ss.stop, iterator)
         else:
             return isinstance(ss, iterator)
+
     # Checking single or multidimensional slices for iterators
     if isinstance(s, tuple):
         for t in s:
             it = check_simple_type(t)
-            if it: return it
+            if it:
+                return it
         return False
     else:
         return check_simple_type(s)
@@ -187,23 +196,27 @@ def slide_from_view(a, sliced):
             # A slice with optional step size (eg. a[i:i+2] or a[i:i+2:2])
             if isinstance(s, slice):
                 #check_shape(s)
-                if s.step:
+
+                try:
                     # Set the correct step size
                     setattr(s.start, "step", s.start.step*s.step)
                     setattr(s.stop, "step", s.stop.step*s.step)
+                except:
+                    pass
+
                 # Check whether the iterator stays within the array
-                if s.start:
+                try:
                     check_bounds(a.shape, i, s.start)
                     start = s.start.offset
                     step = s.start.step
-                else:
+                except:
                     start = None
                     step = 0
 
-                if s.stop:
+                try:
                     check_bounds(a.shape, i, s.stop-1)
                     stop = s.stop.offset
-                else:
+                except:
                     stop = None
 
                 new_slices += (slice(start, stop),)
@@ -220,7 +233,31 @@ def slide_from_view(a, sliced):
                 slides.append((i, s.step, 0))
         else:
             new_slices += (s,)
-    return slide_view(a, new_slices, slides)
+
+    try:
+        (dst, shape, strides) = a.bhc_dyn_view
+        dv = dyn_view(slides, shape, strides)
+    except:
+        dv = dyn_view(slides, a.shape, a.strides)
+#    b = slide_view(a, new_slices, slides)
+#    b.bhc_dyn_view = dv
+    b = a[new_slices]
+    b.bhc_dyn_view = dv
+    return b #slide_view(a, new_slices, slides)
+
+def slidin(a):
+    from . import _bh
+
+    dv = a.bhc_dyn_view
+    if dv:
+        # Set the relevant update conditions for the new view
+#        print("slidin " + str(a))
+#        print(dv.dim_slide_tuple)
+
+#        print("slidin ", a.shape)
+        for (dim, slide, shape) in dv.dim_slide_tuple:
+#            print("dim: %d, slide: %d, shape change: %d" % (dim, slide, shape))
+            _bh.slide_view(a, dim, slide, shape, dv.shape[dim], dv.stride[dim]/8)
 
 
 def slide_view(a, s, dim_slide_tuples):
@@ -239,7 +276,10 @@ def slide_view(a, s, dim_slide_tuples):
     from . import _bh
 
     # Allocate a new view
-    b = a[s]
+    if s:
+        b = a[s]
+    else:
+        b = a[:]
 
     # Set the relevant update conditions for the new view
     for (dim, slide, shape) in dim_slide_tuples:

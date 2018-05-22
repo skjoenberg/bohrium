@@ -67,9 +67,9 @@ void hash_view(const bh_view &view, ViewDB &views, std::stringstream &ss) {
         size_t view_id = views.insert(view).first;
         ss << view_id;
         // Sliding views has identical hashes across iterations
-        if (view.slide.empty()) {
-            ss << view.start;
-        }
+        //        if (view.slide.empty()) {
+        ss << view.start;
+        //        }
 
         ss << view.ndim;
         for (int j = 0; j < view.ndim; ++j) {

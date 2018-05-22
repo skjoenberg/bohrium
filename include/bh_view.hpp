@@ -43,7 +43,11 @@ constexpr int64_t BH_MAXDIM = 16;
 DLLEXPORT std::ostream &operator<<(std::ostream &out, const bh_base &b);
 
 struct bh_view {
-    bh_view() {}
+    bh_view() {
+        start_pointer = nullptr;
+        shape_pointer = nullptr;
+        stride_pointer = nullptr;
+    }
 
     bh_view(const bh_view &view) {
         base = view.base;
@@ -62,10 +66,10 @@ struct bh_view {
         slide_dim_shape_change = view.slide_dim_shape_change;
         slide_dim_stride = view.slide_dim_stride;
         slide_dim_shape = view.slide_dim_shape;
-        index_arrays = view.index_arrays;
-        index_dim = view.index_dim;
-        orig_offset = view.orig_offset;
-        orig_strides = view.orig_strides;
+
+        start_pointer = view.start_pointer;
+        shape_pointer = view.shape_pointer;
+        stride_pointer = view.stride_pointer;
 
         std::memcpy(shape, view.shape, ndim * sizeof(int64_t));
         std::memcpy(stride, view.stride, ndim * sizeof(int64_t));
@@ -101,17 +105,14 @@ struct bh_view {
     /// The shape of the given dimension (used for negative indices)
     std::vector<int64_t> slide_dim_shape;
 
-    /// Index arrays
-    std::vector<int64_t*> index_arrays;
+    // Start pointer
+    bh_base* start_pointer = nullptr;
 
-    /// Index arrays
-    std::vector<size_t> index_dim;
+    // Shape pointer
+    bh_base* shape_pointer = nullptr;
 
-    /// Starting offset
-    int64_t orig_offset;
-
-    /// Dimension strides
-    std::vector<int64_t> orig_strides;
+    // Stride pointer
+    bh_base* stride_pointer = nullptr;
 
     // Returns a vector of tuples that describe the view using (almost)
     // Python Notation.
@@ -204,6 +205,12 @@ struct bh_view {
                 ar >> stride[i];
             }
         }
+    }
+
+    bool uses_pointer() {
+        return (this->start_pointer != nullptr)
+            || (this->shape_pointer != nullptr)
+            || (this->stride_pointer != nullptr);
     }
 
     BOOST_SERIALIZATION_SPLIT_MEMBER()

@@ -35,6 +35,7 @@ PyObject *array_create   = NULL; // The array_create Python module
 PyObject *reorganization = NULL; // The reorganization Python module
 PyObject *masking        = NULL; // The masking Python module
 PyObject *iterator       = NULL; // The iterator Python module
+PyObject *array_iterator = NULL; // The iterator Python module
 int bh_sync_warn         = 0;    // Boolean: should we warn when copying from Bohrium to NumPy
 int bh_mem_warn          = 0;    // Boolean: should we warn when about memory problems
 
@@ -64,6 +65,10 @@ PyObject* simply_new_array(PyTypeObject *type, PyArray_Descr *descr, uint64_t nb
     ((BhArray*) ret)->base.flags |= NPY_ARRAY_CARRAY;
     ((BhArray*) ret)->mmap_allocated = 1;
     ((BhArray*) ret)->data_in_bhc = 1;
+
+    // !!
+    ((BhArray*) ret)->dyn_view = NULL;
+
 
     PyArray_UpdateFlags((PyArrayObject*) ret, NPY_ARRAY_UPDATE_ALL);
     mem_signal_attach(ret, ((BhArray*) ret)->base.data, nbytes);
@@ -152,6 +157,9 @@ static PyObject* BhArray_alloc(PyTypeObject *type, Py_ssize_t nitems) {
     ((BhArray*) obj)->bhc_array = NULL;
     ((BhArray*) obj)->view.initiated = 0;
     ((BhArray*) obj)->data_in_bhc = 0;
+
+    // !!
+    ((BhArray*) obj)->dyn_view   = NULL;
 
     return obj;
 }
@@ -419,6 +427,7 @@ static PyMethodDef BhArrayMethods[] = {
 
 static PyMemberDef BhArrayMembers[] = {
     {"bhc_mmap_allocated", T_BOOL, offsetof(BhArray, mmap_allocated), 0, "Is the base data allocated with mmap?"},
+    {"bhc_dyn_view", T_OBJECT, offsetof(BhArray, dyn_view), 0, "Is there dynamic information on the array?"},
     {NULL}  /* Sentinel */
 };
 
@@ -514,6 +523,12 @@ static int BhArray_SetItem(PyObject *o, PyObject *k, PyObject *v) {
         PyErr_SetString(PyExc_ValueError, "assignment destination is read-only");
         return -1;
     }
+
+    /* PyObject* array_index_check = PyObject_CallMethod(array_iterator, "has_index_array", "O", k); */
+    /* if (array_index_check == Py_True) { */
+    /*     PyObject_CallMethod(array_iterator, "dynamic_set_item", "OOO", o, k, v); */
+    /*     return 0; */
+    /* } */
 
     // Let's handle assignments to a boolean masked array
     if (obj_is_a_bool_mask(o, k)) {
@@ -623,6 +638,13 @@ static PyObject* BhArray_GetItem(PyObject *o, PyObject *k) {
     assert(k != NULL);
     assert(BhArray_CheckExact(o));
 
+    // Indexing with arrays
+    /* PyObject* array_index_check = PyObject_CallMethod(array_iterator, "has_index_array", "O", k); */
+    /* if (array_index_check == Py_True) { */
+    /*     return PyObject_CallMethod(array_iterator, "dynamic_get_item", "OO", o, k); */
+    /* } */
+
+    // Iterator stuff
     PyObject* iterator_check = PyObject_CallMethod(iterator, "has_iterator", "O", k);
     if (iterator_check == Py_True) {
         return PyObject_CallMethod(iterator, "slide_from_view", "OO", o, k);
@@ -745,7 +767,8 @@ static PySequenceMethods array_as_sequence = {
     (ssizeargfunc) BhArray_GetSeqItem,        // sq_item
     (ssizessizeargfunc) 0,                    // sq_slice (Not in the Python doc)
     (ssizeobjargproc) BhArray_SetItem,        // sq_ass_item
-    (ssizessizeobjargproc) BhArray_SetSlice,  // sq_ass_slice (Not in the Python doc)
+    //    (ssizessizeobjargproc) BhArray_SetSlice,  // sq_ass_slice (Not in the Python doc)
+    (ssizessizeobjargproc) NULL,  // sq_ass_slice (Not in the Python doc)
     (objobjproc) 0,                           // sq_contains
     (binaryfunc) NULL,                        // sg_inplace_concat
     (ssizeargfunc) NULL,                      // sg_inplace_repeat
@@ -904,6 +927,10 @@ static PyMethodDef _bhMethods[] = {
     {"slide_view", (PyCFunction) PySlideView, METH_VARARGS | METH_KEYWORDS,
             "Increase `ary`s offset by one."},
     {"set_start", (PyCFunction) PySetStart, METH_VARARGS | METH_KEYWORDS,
+     "Set the start of one array to the first element of another."},
+    {"set_shape", (PyCFunction) PySetShape, METH_VARARGS | METH_KEYWORDS,
+     "Set the start of one array to the first element of another."},
+    {"set_stride", (PyCFunction) PySetStride, METH_VARARGS | METH_KEYWORDS,
             "Set the start of one array to the first element of another."},
     {"random123", (PyCFunction) PyRandom123, METH_VARARGS | METH_KEYWORDS,
             "Create a new random array using the random123 algorithm.\n" \
@@ -966,13 +993,15 @@ PyMODINIT_FUNC init_bh(void)
     reorganization = PyImport_ImportModule("bohrium.reorganization");
     masking        = PyImport_ImportModule("bohrium.masking");
     iterator       = PyImport_ImportModule("bohrium.iterator");
+    array_iterator       = PyImport_ImportModule("bohrium.array_iterator");
 
     if(ufuncs         == NULL ||
        bohrium        == NULL ||
        array_create   == NULL ||
        reorganization == NULL ||
        masking        == NULL ||
-       iterator        == NULL) {
+       iterator       == NULL ||
+       array_iterator == NULL) {
         return RETVAL;
     }
 

@@ -74,26 +74,14 @@ def lu(a):
     """
     Performe LU decomposition on the matrix a so A = L*U
     """
-    dw = True
-    if dw:
-        def loop_body(l, u):
-            c = get_iterator()
-            l[c:, c - 1] = (u[c:, c - 1] / u[c - 1, c - 1:c])
-            u[c:, c - 1:] = u[c:, c - 1:] - l[c:, c - 1][:, None] * u[c - 1, c - 1:]
-        u = a.copy()
-        l = np.zeros_like(a)
-        np.diagonal(l)[:] = 1.0
-        loop.do_while(loop_body, u.shape[0]-2, l, u)
-        return (l, u)
-    else:
-        u = a.copy()
-        l = np.zeros_like(a)
-        np.diagonal(l)[:] = 1.0
-        for c in range(1, u.shape[0]):
-            l[c:, c - 1] = (u[c:, c - 1] / u[c - 1, c - 1:c])
-            u[c:, c - 1:] = u[c:, c - 1:] - l[c:, c - 1][:, None] * u[c - 1, c - 1:]
-            np.flush()
-        return (l, u)
+    u = a.copy()
+    l = np.zeros_like(a)
+    np.diagonal(l)[:] = 1.0
+    for c in range(1, u.shape[0]):
+        l[c:, c - 1] = (u[c:, c - 1] / u[c - 1, c - 1:c])
+        u[c:, c - 1:] = u[c:, c - 1:] - l[c:, c - 1][:, None] * u[c - 1, c - 1:]
+        np.flush()
+    return (l, u)
 
 
 @fix_biclass_wrapper
@@ -134,27 +122,10 @@ def solve(a, b):
     lc = w.shape[1] - 1
     x = w[:, lc].copy()
 
-    def loop_body(lc, x, w):
-        c = get_iterator(1)
+    for c in range(lc - 1, 0, -1):
         x[:c] -= w[:c, c] * x[c:c + 1]
-
-#    for c in range(lc - 1, 0, -1):
-#        x[:c] -= w[:c, c] * x[c:c + 1]
-#        np.flush()
+        np.flush()
     return x
-
-
-    # if not (len(a.shape) == 2 and a.shape[0] == a.shape[1]):
-    #     raise la.LinAlgError("a is not square")
-
-    # w = gauss(np.hstack((a, b[:, np.newaxis])))
-    # lc = w.shape[1] - 1
-    # x = w[:, lc].copy()
-
-    # for c in range(lc - 1, 0, -1):
-    #     x[:c] -= w[:c, c] * x[c:c + 1]
-    #     np.flush()
-    # return x
 
 
 @fix_biclass_wrapper

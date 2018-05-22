@@ -82,7 +82,6 @@ static int bhview_identical(BhView *v1, BhView *v2) {
 
 
 void *bharray_bhc(BhArray *ary) {
-
     // bhc doesn't support empty arrays
     if (PyArray_SIZE((PyArrayObject*) ary) <= 0) {
         fprintf(stderr, "Fatal error: bharray_bhc() - cannot create empty arrays/views\n");
@@ -118,8 +117,12 @@ void *bharray_bhc(BhArray *ary) {
         } else {
             ary->bhc_array = bhc_view(ex_dtype, base->bhc_array, ex_view.ndim,
                                       ex_view.start, ex_view.shape, ex_view.stride);
+
         }
         ary->view = ex_view;
+
+        PyObject *iterator = PyImport_ImportModule("bohrium.iterator");
+        PyObject_CallMethod(iterator, "slidin", "O", ary);
     } else if(!bhview_identical(&ary->view, &ex_view)) {
         assert(ary->bhc_array != NULL);
         void *new = bhc_view(ex_dtype, ary->bhc_array, ex_view.ndim, ex_view.start, ex_view.shape, ex_view.stride);
@@ -128,5 +131,6 @@ void *bharray_bhc(BhArray *ary) {
         ary->view = ex_view;
     }
     assert(ary->view.initiated && bhview_identical(&ary->view, &ex_view));
+
     return ary->bhc_array;
 }

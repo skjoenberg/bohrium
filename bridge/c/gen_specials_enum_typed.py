@@ -113,30 +113,72 @@ def main(args):
 
     doc = "\n// Slides the view of an array in the given dimensions, by the given strides for each iteration in a loop.\n"
     impl += doc; head += doc
-    decl = "void bhc_slide_view(bhc_dtype dtype, const void *ary1, const void *ary2, size_t dim, int slide, int shape)"
+    decl = "void bhc_slide_view(bhc_dtype dtype, const void *ary1, size_t dim, int slide, int view_shape, int array_shape, int array_stride)"
     head += "DLLEXPORT %s;\n" % decl
     impl += """%s
 {
     switch(dtype) {\n""" % decl
     for key, t in type_map.items():
-        impl += "        case %s: bhc_slide_view_A%s_A%s((%s)ary1, (%s)ary2, dim, slide, shape); break;\n" % (key, t['name'], t['name'], t['bhc_ary'], t['bhc_ary'])
+        impl += "        case %s: bhc_slide_view_A%s((%s)ary1, dim, slide, view_shape, array_shape, array_stride); break;\n" % (key, t['name'], t['bhc_ary'])
     impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
     }
     }\n"""
 
+#     doc = "\n// Slides the view of an array in the given dimensions, by the given strides for each iteration in a loop.\n"
+#     impl += doc; head += doc
+#     decl = "void bhc_slide_view(bhc_dtype dtype, const void *ary1, const void *ary2, size_t dim, int slide, int shape)"
+#     head += "DLLEXPORT %s;\n" % decl
+#     impl += """%s
+# {
+#     switch(dtype) {\n""" % decl
+#     for key, t in type_map.items():
+#         impl += "        case %s: bhc_slide_view_A%s_A%s((%s)ary1, (%s)ary2, dim, slide, shape); break;\n" % (key, t['name'], t['name'], t['bhc_ary'], t['bhc_ary'])
+#     impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
+#     }
+#     }\n"""
+
+
 # !!!!!!!!!!!!!!
     doc = "\n// Changes the offset of a view to the first item in another view.\n"
     impl += doc; head += doc
-    decl = "void bhc_set_start(bhc_dtype dtype, const void *ary1, const void *ary2, const void *ary3, size_t dim)"
+    decl = "void bhc_set_start(bhc_dtype dtype, const void *ary1, const int64_t *ary2)"
     head += "DLLEXPORT %s;\n" % decl
     impl += """%s
 {
     switch(dtype) {\n""" % decl
     for key, t in type_map.items():
-        impl += "        case %s: bhc_set_start_A%s_A%s_Aint64((%s)ary1, (%s)ary2, (bhc_ndarray_int64_p)ary3, dim); break;\n" % (key, t['name'], t['name'], t['bhc_ary'], t['bhc_ary'])
+        impl += "        case %s: bhc_set_start_A%s_Aint64((%s)ary1, (bhc_ndarray_int64_p)ary2); break;\n" % (key, t['name'], t['bhc_ary'])
     impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
     }
 }\n"""
+
+    doc = "\n// Changes the shape of ary1 to the `ndim` first values of ary2.\n"
+    impl += doc; head += doc
+    decl = "void bhc_set_shape(bhc_dtype dtype, const void *ary1, const void *ary2)"
+    head += "DLLEXPORT %s;\n" % decl
+    impl += """%s
+{
+    switch(dtype) {\n""" % decl
+    for key, t in type_map.items():
+        impl += "        case %s: bhc_set_shape_A%s_Aint64((%s)ary1, (bhc_ndarray_int64_p)ary2); break;\n" % (key, t['name'], t['bhc_ary'])
+    impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
+    }
+}\n"""
+
+    doc = "\n// Changes the stride of ary1 to the `ndim` first values of ary2.\n"
+    impl += doc; head += doc
+    decl = "void bhc_set_stride(bhc_dtype dtype, const void *ary1, const void *ary2)"
+    head += "DLLEXPORT %s;\n" % decl
+    impl += """%s
+{
+    switch(dtype) {\n""" % decl
+    for key, t in type_map.items():
+        impl += "        case %s: bhc_set_stride_A%s_Aint64((%s)ary1, (bhc_ndarray_int64_p)ary2); break;\n" % (key, t['name'], t['bhc_ary'])
+    impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
+    }
+}\n"""
+
+
 
     doc = "\n// Extension Method, returns 0 when the extension exist\n"
     impl += doc; head += doc

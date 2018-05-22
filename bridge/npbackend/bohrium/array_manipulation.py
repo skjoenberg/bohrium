@@ -8,6 +8,7 @@ from . import bhary
 from . import _util
 from .bhary import fix_biclass_wrapper
 from . import numpy_backport
+from . import iterator
 
 
 @fix_biclass_wrapper
@@ -487,10 +488,61 @@ def broadcast_arrays(*args):
                 raise
 
         for a, b in zip(args, bargs):
+#            print("broadcast")
+#            print(args[0].shape)
+#            print(args[0].bhc_dyn_view)
+#            print(a.shape)
+#            print(b.shape)
+#            assert(a.shape != b.shape)
+#            print("hej")
+
+            a_dv = a.bhc_dyn_view
+
+#            print(b.strides)
+#            b_dv = iterator.dyn_view((0,0,0), a.shape, a.strides)
+#            b.bhc_dyn_view = b_dv
+
+            if a_dv:
+#                print("monkaSS")
+#                print("a shape: " + str(a.shape) + ", b shape: " + str(b.shape))
+#                print(args[1].shape)
+#                print(args[0].shape)
+#                print(args[0].bhc_dyn_view)
+                if args[0].bhc_dyn_view:# and a.shape != b.shape:
+#                    print("HEHEHEHEHHE")
+#                try:
+                    b_dst = a_dv.dim_slide_tuple
+                    o_dst = args[0].bhc_dyn_view.dim_slide_tuple
+                    new_dst = []
+
+                    for (o_dim, _, o_shape) in o_dst:
+                        if o_shape != 0:
+                            found = False
+                            for i in range(len(b_dst)):
+                                (dim, slide, _) = b_dst[i]
+                                if dim == o_dim:
+                                    b_dst[i] = (dim, slide, o_shape)
+                                    found = True
+                                    break
+                            if not found:
+                                b_dst.append(o_dim, 0, o_shape)
+                    b_dv = iterator.dyn_view(b_dst, a_dv.shape, a_dv.stride)
+
+                    #print("dst: " + str(b_dst))
+                    #print(a_dv.shape, a_dv.stride)
+
+                    b.bhc_dyn_view = b_dv
+                else:
+
+                    b.bhc_dyn_view = a.bhc_dyn_view
+                    print("from a: " + str(a_dv.dim_slide_tuple))
+                    print(a_dv.shape, a_dv.stride)
+
             if numpy.isscalar(a) or not isinstance(a, numpy.ndarray):
                 ret.append(b)
             else:
                 ret.append(b)
+
     except ValueError as msg:
         if str(msg).find("shape mismatch: objects cannot be broadcast to a single shape") != -1:
             shapes = [arg.shape for arg in args]

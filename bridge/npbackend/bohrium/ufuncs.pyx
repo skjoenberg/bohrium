@@ -10,6 +10,7 @@ import sys
 import os
 import warnings
 from . import _util
+from . import iterator
 from . import array_create
 import numpy_force as np
 from . import _info
@@ -200,6 +201,7 @@ class Ufunc(object):
         # Find the type signature
         (out_dtype, in_dtype) = _util.type_sig(self.info['name'], args)
 
+
         # Convert dtype of all inputs to match the function type signature
         for i in range(len(args)):
             if not dtype_equal(args[i], in_dtype):
@@ -208,11 +210,52 @@ class Ufunc(object):
                 else:
                     tmp = array_create.empty_like(args[i], dtype=in_dtype)
                     tmp[...] = args[i]
+                    # dst_m = {}
+                    # if i ==0:
+                    #     for a in args:
+                    #         if bhary.check(a) and a.bhc_dyn_view:
+                    #             for (d,sl,sh) in a.bhc_dyn_view.dim_slide_tuple:
+                    #                 if dst_m.has_key(d):
+                    #                     continue
+                    #                 else:
+                    #                     dst_m[d] = (0, sh)
+
+                    #         if dst_m.keys():
+                    #             dst = []
+                    #             for key in dst_m.keys():
+                    #                 (sl, sh) = dst_m[key]
+                    #                 dst.append((key, sl, sh))
+                    #         dv = iterator.dyn_view(dst, tmp.shape,tmp.strides)
+                    #         tmp.bhc_dyn_view = dv
                     args[i] = tmp
 
         # Insert the output array
         if out is None or not dtype_equal(out_dtype, out.dtype):
-            args.insert(0, array_create.empty(out_shape, out_dtype))
+            outz = array_create.empty(out_shape, out_dtype)
+
+            dst_m = {}
+            for a in args:
+                if bhary.check(a) and a.bhc_dyn_view:
+                    print("dynne")
+                    print(a.shape)
+                    print(a.bhc_dyn_view.dim_slide_tuple)
+                    for (d,_,sh) in a.bhc_dyn_view.dim_slide_tuple:
+                        if dst_m.has_key(d) and sh != 0:
+                            continue
+                        else:
+                            dst_m[d] = sh
+
+            if dst_m.keys():
+                dst = []
+                for key in dst_m.keys():
+                    sh = dst_m[key]
+                    dst.append((key, 0, sh))
+                dv = iterator.dyn_view(dst, outz.shape,outz.strides)
+                outz.bhc_dyn_view = dv
+                print("AYYYYY LMAO")
+                print(dst)
+#            args.insert(0, array_create.empty(out_shape, out_dtype))
+            args.insert(0, outz)
         else:
             args.insert(0, out)
 

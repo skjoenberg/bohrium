@@ -57,6 +57,7 @@ typedef struct {
     BhView view; // View information, which might be obsolete
     void *bhc_array; // bhc handle to the array
     int data_in_bhc; // Is the data in bhc?
+    PyObject* dyn_view; //
 } BhArray;
 
 // Exposing some global variables implemented in `_bh.c`
@@ -67,6 +68,7 @@ extern PyObject *array_create;   // The array_create Python module
 extern PyObject *reorganization; // The reorganization Python module
 extern PyObject *masking;        // The masking Python module
 extern PyObject *iterator;       // The iterator Python module
+extern PyObject *array_iterator;       // The iterator Python module
 extern int bh_sync_warn;         // Boolean flag: should we warn when copying from Bohrium to NumPy
 extern int bh_mem_warn;          // Boolean flag: should we warn when about memory problems
 

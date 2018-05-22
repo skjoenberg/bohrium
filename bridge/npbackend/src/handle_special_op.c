@@ -160,13 +160,94 @@ PyObject* PySync(PyObject *self, PyObject *args, PyObject *kwds) {
 
 PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds) {
     PyObject *ary1;
-    PyObject *ary2;
     unsigned int dim;
     int slide;
-    int shape;
+    int view_shape;
+    int array_shape;
+    int array_stride;
 
-    static char *kwlist[] = {"ary1", "ary2", "dim:int", "slide:int", "slide:shape", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOKKK", kwlist, &ary1, &ary2, &dim, &slide, &shape)) {
+    static char *kwlist[] = {"ary1", "dim:int", "slide:int", "view_shape:int", "array_shape:int", "array_stride:int", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OKKKKK", kwlist, &ary1, &dim, &slide, &view_shape, &array_shape, &array_stride)) {
+        return NULL;
+    }
+
+    bhc_dtype type1;
+    bhc_bool constant1;
+    void *operand1;
+    normalize_cleanup_handle cleanup1;
+    int err1 = normalize_operand(ary1, &type1, &constant1, &operand1, &cleanup1);
+    cleanup1.objs2free_count = 0;
+    if (err1 == -1) {
+        normalize_operand_cleanup(&cleanup1);
+        if (PyErr_Occurred() != NULL) {
+            return NULL;
+        } else {
+            Py_RETURN_NONE;
+        }
+    }
+
+    bhc_slide_view(type1, operand1, dim, slide, view_shape, array_shape, array_stride);
+    normalize_operand_cleanup(&cleanup1);
+
+    Py_RETURN_NONE;
+}
+
+/* PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds) { */
+/*     PyObject *ary1; */
+/*     PyObject *ary2; */
+/*     unsigned int dim; */
+/*     int slide; */
+/*     int shape; */
+
+/*     static char *kwlist[] = {"ary1", "ary2", "dim:int", "slide:int", "slide:shape", NULL}; */
+/*     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOKKK", kwlist, &ary1, &ary2, &dim, &slide, &shape)) { */
+/*         return NULL; */
+/*     } */
+
+/*     bhc_dtype type1; */
+/*     bhc_bool constant1; */
+/*     void *operand1; */
+/*     normalize_cleanup_handle cleanup1; */
+/*     int err1 = normalize_operand(ary1, &type1, &constant1, &operand1, &cleanup1); */
+/*     cleanup1.objs2free_count = 0; */
+/*     if (err1 == -1) { */
+/*         normalize_operand_cleanup(&cleanup1); */
+/*         if (PyErr_Occurred() != NULL) { */
+/*             return NULL; */
+/*         } else { */
+/*             Py_RETURN_NONE; */
+/*         } */
+/*     } */
+
+/*     bhc_dtype type2; */
+/*     bhc_bool constant2; */
+/*     void *operand2; */
+/*     normalize_cleanup_handle cleanup2; */
+/*     int err2 = normalize_operand(ary2, &type2, &constant2, &operand2, &cleanup2); */
+/*     cleanup2.objs2free_count = 0; */
+/*     if (err2 == -1) { */
+/*         normalize_operand_cleanup(&cleanup2); */
+/*         if (PyErr_Occurred() != NULL) { */
+/*             return NULL; */
+/*         } else { */
+/*             Py_RETURN_NONE; */
+/*         } */
+/*     } */
+
+/*     bhc_slide_view(type1, operand1, operand2, dim, slide, shape); */
+/*     normalize_operand_cleanup(&cleanup1); */
+/*     normalize_operand_cleanup(&cleanup2); */
+
+/*     Py_RETURN_NONE; */
+/* } */
+
+
+PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds) {
+    PyObject *ary1;
+    PyObject *ary2;
+
+    static char *kwlist[] = {"ary1", "ary2", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &ary1, &ary2)) {
         return NULL;
     }
 
@@ -200,21 +281,20 @@ PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds) {
         }
     }
 
-    bhc_slide_view(type1, operand1, operand2, dim, slide, shape);
+    bhc_set_start(type1, operand1, operand2);
+
     normalize_operand_cleanup(&cleanup1);
     normalize_operand_cleanup(&cleanup2);
 
     Py_RETURN_NONE;
 }
 
-PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds) {
+PyObject* PySetShape(PyObject *self, PyObject *args, PyObject *kwds) {
     PyObject *ary1;
     PyObject *ary2;
-    PyObject *ary3;
-    unsigned int dim;
 
-    static char *kwlist[] = {"ary1", "ary2", "ary3", "dim:int", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOOK", kwlist, &ary1, &ary2, &ary3, &dim)) {
+    static char *kwlist[] = {"ary1", "ary2", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &ary1, &ary2)) {
         return NULL;
     }
 
@@ -248,14 +328,31 @@ PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds) {
         }
     }
 
-    bhc_dtype type3;
-    bhc_bool constant3;
-    void *operand3;
-    normalize_cleanup_handle cleanup3;
-    int err3 = normalize_operand(ary3, &type3, &constant3, &operand3, &cleanup3);
-    cleanup3.objs2free_count = 0;
-    if (err3 == -1) {
-        normalize_operand_cleanup(&cleanup3);
+    bhc_set_shape(type1, operand1, operand2);
+
+    normalize_operand_cleanup(&cleanup1);
+    normalize_operand_cleanup(&cleanup2);
+
+    Py_RETURN_NONE;
+}
+
+PyObject* PySetStride(PyObject *self, PyObject *args, PyObject *kwds) {
+    PyObject *ary1;
+    PyObject *ary2;
+
+    static char *kwlist[] = {"ary1", "ary2", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "OO", kwlist, &ary1, &ary2)) {
+        return NULL;
+    }
+
+    bhc_dtype type1;
+    bhc_bool constant1;
+    void *operand1;
+    normalize_cleanup_handle cleanup1;
+    int err1 = normalize_operand(ary1, &type1, &constant1, &operand1, &cleanup1);
+    cleanup1.objs2free_count = 0;
+    if (err1 == -1) {
+        normalize_operand_cleanup(&cleanup1);
         if (PyErr_Occurred() != NULL) {
             return NULL;
         } else {
@@ -263,11 +360,25 @@ PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds) {
         }
     }
 
-    bhc_set_start(type1, operand1, operand2, operand3, dim);
+    bhc_dtype type2;
+    bhc_bool constant2;
+    void *operand2;
+    normalize_cleanup_handle cleanup2;
+    int err2 = normalize_operand(ary2, &type2, &constant2, &operand2, &cleanup2);
+    cleanup2.objs2free_count = 0;
+    if (err2 == -1) {
+        normalize_operand_cleanup(&cleanup2);
+        if (PyErr_Occurred() != NULL) {
+            return NULL;
+        } else {
+            Py_RETURN_NONE;
+        }
+    }
+
+    bhc_set_stride(type1, operand1, operand2);
 
     normalize_operand_cleanup(&cleanup1);
     normalize_operand_cleanup(&cleanup2);
-    normalize_operand_cleanup(&cleanup3);
 
     Py_RETURN_NONE;
 }

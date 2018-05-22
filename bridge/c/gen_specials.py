@@ -208,38 +208,91 @@ def main(args):
     impl += doc; head += doc
     for key, t in type_map.items():
         decl = "void bhc_slide_view"
-        decl += "_A%(name)s_A%(name)s" % t
-        decl += "(const %(bhc_ary)s ary1, const %(bhc_ary)s ary2, size_t dim, int slide, int shape)" % t
+        decl += "_A%(name)s" % t
+        decl += "(const %(bhc_ary)s ary1, size_t dim, int slide, int view_shape, int array_shape, int array_stride)" % t
         head += "DLLEXPORT %s;\n" % decl
         impl += "%s" % decl
         impl += """\
 {
    bhxx::Runtime::instance().slide_view(
         (bhxx::BhArray<%(cpp)s>*) ary1,
-        (bhxx::BhArray<%(cpp)s>*) ary2,
         dim,
         slide,
-        shape);
+        view_shape,
+        array_shape,
+        array_stride);
 }
 
 """ % t
 
-# !!!!!!!
-    doc = "\n// Changes the offset of a view to the first item in another view.\n"
+#     doc = "\n// Slides the view of an array in the given dimensions, by the given strides for each iteration in a loop.\n"
+#     impl += doc; head += doc
+#     for key, t in type_map.items():
+#         decl = "void bhc_slide_view"
+#         decl += "_A%(name)s_A%(name)s" % t
+#         decl += "(const %(bhc_ary)s ary1, const %(bhc_ary)s ary2, size_t dim, int slide, int shape)" % t
+#         head += "DLLEXPORT %s;\n" % decl
+#         impl += "%s" % decl
+#         impl += """\
+# {
+#    bhxx::Runtime::instance().slide_view(
+#         (bhxx::BhArray<%(cpp)s>*) ary1,
+#         (bhxx::BhArray<%(cpp)s>*) ary2,
+#         dim,
+#         slide,
+#         shape);
+# }
+
+# """ % t
+
+
+    doc = "\n// Set start of an array to the first element of another view.\n"
     impl += doc; head += doc
     for key, t in type_map.items():
         decl = "void bhc_set_start"
-        decl += "_A%(name)s_A%(name)s_Aint64" % t
-        decl += "(const %(bhc_ary)s ary1, const %(bhc_ary)s ary2, const bhc_ndarray_int64_p ary3, size_t dim)" % t
+        decl += "_A%(name)s_Aint64" % t
+        decl += "(const %(bhc_ary)s ary1, const bhc_ndarray_int64_p ary2)" % t
         head += "DLLEXPORT %s;\n" % decl
         impl += "%s" % decl
         impl += """\
 {
    bhxx::Runtime::instance().set_start(
         (bhxx::BhArray<%(cpp)s>*) ary1,
-        (bhxx::BhArray<%(cpp)s>*) ary2,
-        (bhxx::BhArray<int64_t>*) ary3,
-        dim);
+        (bhxx::BhArray<int64_t>*) ary2);
+}
+
+""" % t
+
+    doc = "\n// Set shape of an array to the first element of another view.\n"
+    impl += doc; head += doc
+    for key, t in type_map.items():
+        decl = "void bhc_set_shape"
+        decl += "_A%(name)s_Aint64" % t
+        decl += "(const %(bhc_ary)s ary1, const bhc_ndarray_int64_p ary2)" % t
+        head += "DLLEXPORT %s;\n" % decl
+        impl += "%s" % decl
+        impl += """\
+{
+   bhxx::Runtime::instance().set_shape(
+        (bhxx::BhArray<%(cpp)s>*) ary1,
+        (bhxx::BhArray<int64_t>*) ary2);
+}
+
+""" % t
+
+    doc = "\n// Set stride of an array to the first element of another view.\n"
+    impl += doc; head += doc
+    for key, t in type_map.items():
+        decl = "void bhc_set_stride"
+        decl += "_A%(name)s_Aint64" % t
+        decl += "(const %(bhc_ary)s ary1, const bhc_ndarray_int64_p ary2)" % t
+        head += "DLLEXPORT %s;\n" % decl
+        impl += "%s" % decl
+        impl += """\
+{
+   bhxx::Runtime::instance().set_stride(
+        (bhxx::BhArray<%(cpp)s>*) ary1,
+        (bhxx::BhArray<int64_t>*) ary2);
 }
 
 """ % t

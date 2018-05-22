@@ -136,34 +136,171 @@ Impl::~Impl() {
 void Impl::execute(BhIR *bhir) {
     bh_base *cond = bhir->getRepeatCondition();
 
+    // //    BhIR setup_bhir(std::vector<bh_instruction>(), std::set<bh_base *>(), 0, nullptr);
+    // BhIR setup_bhir(std::vector<bh_instruction>(), bhir->_syncs, 0, nullptr);
+    // BhIR execution_bhir(std::vector<bh_instruction>(), bhir->_syncs, 0, cond);
+
+    // std::unordered_set<bh_base*> index_bases; // = std::unorderepd_set<bh_base*>();
+
+    // for (bh_instruction &instr : bhir->instr_list) {
+    //     for (bh_view &view : instr.operand) {
+    //         if (view.start_pointer != nullptr) {
+    //             index_bases.insert(view.start_pointer);
+    //         }
+    //         if (view.shape_pointer != nullptr) {
+    //             index_bases.insert(view.shape_pointer);
+    //         }
+    //     }
+    // }
+
+    // //    printf("index bases: %d\n", index_bases.size());
+
+    // std::unordered_map<bh_base*, bh_instruction> frees;
+    // BhIR new_bhir(std::vector<bh_instruction>(), bhir->_syncs, bhir->getNRepeats(), cond);
+    // for (bh_instruction &instr : bhir->instr_list) {
+    //     if (instr.opcode == 55) {
+    //         bh_base *free_base = instr.operand[0].base;
+    //         if (index_bases.count(free_base) > 0) {
+    //             frees.insert({free_base, instr});
+    //             continue;
+    //         }
+    //     }
+    //     new_bhir.instr_list.push_back(instr);
+    // }
+
+    // for (int i = new_bhir.instr_list.size()-1; i >= 0; i--) {
+    //     bh_instruction instr = new_bhir.instr_list[i];
+    //     for (bh_view &view : instr.operand) {
+    //         if (view.start_pointer != nullptr) {
+    //             bh_base* view_base = view.start_pointer;
+    //             auto search = frees.find(view_base);
+    //             if (search != frees.end()) {
+    //                 bh_instruction free = search->second;
+    //                 new_bhir.instr_list.insert(new_bhir.instr_list.begin()+i+1, free);
+    //                 printf("inserted at %d\n", i+1);
+    //                 frees.erase(view_base);
+    //             }
+    //         }
+
+    //         if (view.shape_pointer != nullptr) {
+    //             bh_base* view_base = view.shape_pointer;
+    //             auto search = frees.find(view_base);
+    //             if (search != frees.end()) {
+    //                 bh_instruction free = search->second;
+    //                 new_bhir.instr_list.insert(new_bhir.instr_list.begin()+i+1, free);
+    //                 printf("inserted at %d\n", i+1);
+    //                 frees.erase(view_base);
+    //             }
+    //         }
+    //     }
+    // }
+
+    // //    printf("Lengths: orig %d, new %d\n", bhir->instr_list.size(), new_bhir.instr_list.size());
+
+    // for (int i = 0; i < bhir->instr_list.size(); i++) {
+    //     int orig_op = bhir->instr_list[i].opcode;
+    //     int new_op = new_bhir.instr_list[i].opcode;
+    //     if (orig_op != new_op) {
+    //         printf("%d. orig opcode: %d, new opcode: %d\n", i, orig_op, new_op);
+    //     }
+    // }
+
+    // bhir = &new_bhir;
+
+    // bool has_pointer = false;
+    // for (bh_instruction &instr : bhir->instr_list) {
+    //     //        printf("opcode: %d\n", instr.opcode);
+    //     if (has_pointer) {
+    //         execution_bhir.instr_list.push_back(instr);
+    //     } else {
+    //         for (bh_view &view : instr.operand) {
+    //             if (view.uses_pointer()) {
+    //                 printf("Pointer with adress: %d\n", view.start_pointer);
+    //                 has_pointer = true;
+    //                 break;
+    //             }
+    //         }
+    //         if (not has_pointer) {
+    //             setup_bhir.instr_list.push_back(instr);
+    //         } else {
+    //             execution_bhir.instr_list.push_back(instr);
+    //         }
+    //     }
+    // }
+
+    // if (!has_pointer) {
+    //     execution_bhir = setup_bhir;
+    // }
+
     for (uint64_t i = 0; i < bhir->getNRepeats(); ++i) {
-        for (bh_instruction &instr : bhir->instr_list) {
-            for (bh_view &view : instr.operand) {
-                if (not view.index_arrays.empty()) {
-                    view.start = view.orig_offset;
+        // if (has_pointer) {
+        //     printf("!!!!!!!!!! Burde ikke ske\n");
+        //     // Let's handle extension methods
+        //     engine.handleExtmethod(*this, &setup_bhir);
 
-                    for (size_t j=0; j < view.index_arrays.size(); j++) {
-                        int64_t stride = view.orig_strides.at(j);
-                        int64_t idx = *(view.index_arrays.at(j)) * stride;
-                        view.start += idx;
+        //     // And then the regular instructions
+        //     engine.handleExecution(&setup_bhir);
 
-                    }
-                }
-            }
-        }
+        //     printf("length setup bhir %d\n", setup_bhir.instr_list.size());
 
+        //     for (bh_instruction &instr : execution_bhir.instr_list) {
+        //         for (bh_view &view : instr.operand) {
+        //             if (not (view.start_pointer == nullptr)) {
+        //                 printf("Updating view to value at adress: %d\n", view.start_pointer);
+        //                 printf("Value is: %d\n", *((int64_t*) view.start_pointer->data));
+        //                 view.start = *((int64_t*) view.start_pointer->data);
+        //                 printf("New start is: %d\n", view.start);
+        //             }
+        //             if (not (view.shape_pointer == nullptr)) {
+        //                 printf("HEEEEY\n");
+        //                 int64_t* shapes = (int64_t*) view.shape_pointer->data;
+        //                 for (int i=0; i < view.ndim; i++) {
+        //                     view.shape[i] = shapes[i];
+        //                     printf("hejsa\n");
+        //                     printf("shape %d: %d\n", i, view.shape[i]);
+        //                 }
+        //             }
+        //             if (not (view.stride_pointer == nullptr)) {
+        //                 int64_t* strides = (int64_t*) view.stride_pointer->data;
+        //                 for (int i=0; i < view.ndim; i++) {
+        //                     view.stride[i] = strides[i];
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+
+        // // Let's handle extension methods
+        // engine.handleExtmethod(*this, &execution_bhir);
+
+        // // And then the regular instructions
+        // engine.handleExecution(&execution_bhir);
+
+        // // Check condition
+        // if (cond != nullptr and cond->data != nullptr and not ((bool*) cond->data)[0]) {
+        //     break;
+        // }
+
+        // // Change views that slide between iterations
+        // slide_views(&execution_bhir);
+
+
+        //        printf("Executing ext\n");
         // Let's handle extension methods
         engine.handleExtmethod(*this, bhir);
 
+        //        printf("Executing kernel\n");
         // And then the regular instructions
         engine.handleExecution(bhir);
+        //        printf("Done executing kernel\n");
+
         // Check condition
         if (cond != nullptr and cond->data != nullptr and not ((bool*) cond->data)[0]) {
             break;
         }
-        // Change views that slide between iterations
-        //        slide_views(bhir);
 
+        // Change views that slide between iterations
+        slide_views(bhir);
 
     }
 }

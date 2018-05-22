@@ -74,24 +74,24 @@ class BhArray {
     // The relevant dimensions
     std::vector<int64_t> slide_dim_shape;
 
-    // Index arrays
-    std::vector<int64_t*> index_arrays;
+    // Start pointer
+    bh_base* start_pointer;
 
-    // Index arrays
-    std::vector<size_t> index_dim;
+    // Shape pointer
+    bh_base* shape_pointer;
 
-    // Starting offset
-    int64_t orig_offset;
-
-    // Dimension strides
-    std::vector<int64_t> orig_strides;
+    // Stride pointer
+    bh_base* stride_pointer;
 
     /** Create a new view */
     BhArray(Shape shape_, Stride stride_, const size_t offset_ = 0)
           : offset(offset_),
             shape(shape_),
             stride(std::move(stride_)),
-            base(make_base_ptr(T(0), shape_.prod())) {
+            base(make_base_ptr(T(0), shape_.prod())),
+            start_pointer(nullptr),
+            shape_pointer(nullptr),
+            stride_pointer(nullptr) {
         assert(shape.size() == stride.size());
         assert(shape.prod() > 0);
     }
@@ -112,7 +112,10 @@ class BhArray {
           : offset(offset_),
             shape(std::move(shape_)),
             stride(std::move(stride_)),
-            base(std::move(base_)) {
+            base(std::move(base_)),
+            start_pointer(nullptr),
+            shape_pointer(nullptr),
+            stride_pointer(nullptr) {
         assert(shape.size() == stride.size());
         assert(shape.prod() > 0);
     }

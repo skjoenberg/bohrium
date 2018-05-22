@@ -43,6 +43,9 @@ void BhInstruction::appendOperand(BhBase& base) {
     view.ndim      = 1;
     view.shape[0]  = base.nelem;
     view.stride[0] = 1;
+    view.start_pointer = nullptr;
+    view.shape_pointer = nullptr;
+    view.stride_pointer = nullptr;
 
     operand.push_back(view);
 }
@@ -79,10 +82,9 @@ void BhInstruction::appendOperand(const BhArray<T>& ary) {
     view.slide_dim_stride = ary.slide_dim_stride;
     view.slide_dim_shape = ary.slide_dim_shape;
 
-    view.index_arrays = ary.index_arrays;
-    view.index_dim = ary.index_dim;
-    view.orig_offset = static_cast<int64_t>(ary.offset);
-    view.orig_strides = ary.orig_strides;
+    view.start_pointer = ary.start_pointer;
+    view.shape_pointer = ary.shape_pointer;
+    view.stride_pointer = ary.stride_pointer;
 
     std::copy(ary.shape.begin(), ary.shape.end(), &view.shape[0]);
     std::copy(ary.stride.begin(), ary.stride.end(), &view.stride[0]);
@@ -93,6 +95,9 @@ template <typename T>
 void BhInstruction::appendOperand(T scalar) {
     bh_view view;
     view.base = nullptr;
+    view.start_pointer = nullptr;
+    view.shape_pointer = nullptr;
+    view.stride_pointer = nullptr;
     operand.push_back(view);
     constant = bh_constant(scalar);
 }

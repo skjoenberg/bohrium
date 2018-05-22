@@ -88,29 +88,48 @@ class Runtime {
 
     // Change the offset of slide_view_ptr by slide for each iteration of a loop
     template <typename T>
-    void slide_view(BhArray<T>* orig_view_ptr, BhArray<T>* slide_view_ptr, size_t dim, int slide, int shape) {
-        if (not orig_view_ptr->slide.empty()) {
-            throw std::runtime_error("Nested views using iterators are not supported.");
-        }
-
-        slide_view_ptr->slide.push_back(slide);
-        slide_view_ptr->slide_dim.push_back(dim);
-        slide_view_ptr->slide_dim_shape_change.push_back(shape);
-        slide_view_ptr->slide_dim_stride.push_back(orig_view_ptr->stride[dim]);
-        slide_view_ptr->slide_dim_shape.push_back(orig_view_ptr->shape[dim]);
+    void slide_view(BhArray<T>* view_ptr, size_t dim, int slide, int view_shape, int array_shape, int array_stride) {
+        view_ptr->slide.push_back(slide);
+        view_ptr->slide_dim.push_back(dim);
+        view_ptr->slide_dim_shape_change.push_back(view_shape);
+        view_ptr->slide_dim_stride.push_back(array_stride);
+        view_ptr->slide_dim_shape.push_back(array_shape);
     }
+
+    // // Change the offset of slide_view_ptr by slide for each iteration of a loop
+    // template <typename T>
+    // void slide_view(BhArray<T>* orig_view_ptr, BhArray<T>* slide_view_ptr, size_t dim, int slide, int shape) {
+    //     if (not orig_view_ptr->slide.empty()) {
+    //         throw std::runtime_error("Nested views using iterators are not supported.");
+    //     }
+
+    //     slide_view_ptr->slide.push_back(slide);
+    //     slide_view_ptr->slide_dim.push_back(dim);
+    //     slide_view_ptr->slide_dim_shape_change.push_back(shape);
+    //     slide_view_ptr->slide_dim_stride.push_back(orig_view_ptr->stride[dim]);
+    //     slide_view_ptr->slide_dim_shape.push_back(orig_view_ptr->shape[dim]);
+    // }
+
 
     // Change the offset of slide_view_ptr by slide for each iteration of a loopp
     template <typename T>
-
-    void set_start(BhArray<T>* orig_arr, BhArray<T>* view_arr, BhArray<int64_t>* index_array, size_t dim) {
-        size_t offset = index_array->offset;
-        int64_t* base = (int64_t*) index_array->base.get()->data;
-        int64_t* pointer = &(base[offset]);
-        view_arr->index_arrays.push_back(pointer);
-        view_arr->index_dim.push_back(dim);
-        view_arr->orig_strides.push_back(orig_arr->stride[dim]);
+    void set_start(BhArray<T>* view_arr, BhArray<int64_t>* index_array) {
+        bh_base* base = index_array->base.get();
+        view_arr->start_pointer = base;
     }
+
+    template <typename T>
+    void set_shape(BhArray<T>* view_arr, BhArray<int64_t>* index_array) {
+        bh_base* base = index_array->base.get();
+        view_arr->shape_pointer = base;
+    }
+
+    template <typename T>
+    void set_stride(BhArray<T>* view_arr, BhArray<int64_t>* index_array) {
+        bh_base* base = index_array->base.get();
+        view_arr->stride_pointer = base;
+    }
+
 
     // Send and receive a message through the component stack
     std::string message(const std::string &msg);
