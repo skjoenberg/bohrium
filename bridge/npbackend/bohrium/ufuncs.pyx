@@ -236,9 +236,9 @@ class Ufunc(object):
             dst_m = {}
             for a in args:
                 if bhary.check(a) and a.bhc_dyn_view:
-                    print("dynne")
-                    print(a.shape)
-                    print(a.bhc_dyn_view.dim_slide_tuple)
+                    # print("dynne")
+                    # print(a.shape)
+                    # print(a.bhc_dyn_view.dim_slide_tuple)
                     for (d,_,sh) in a.bhc_dyn_view.dim_slide_tuple:
                         if dst_m.has_key(d) and sh != 0:
                             continue
@@ -252,8 +252,6 @@ class Ufunc(object):
                     dst.append((key, 0, sh))
                 dv = iterator.dyn_view(dst, outz.shape,outz.strides)
                 outz.bhc_dyn_view = dv
-                print("AYYYYY LMAO")
-                print(dst)
 #            args.insert(0, array_create.empty(out_shape, out_dtype))
             args.insert(0, outz)
         else:

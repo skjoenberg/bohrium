@@ -535,8 +535,6 @@ def broadcast_arrays(*args):
                 else:
 
                     b.bhc_dyn_view = a.bhc_dyn_view
-                    print("from a: " + str(a_dv.dim_slide_tuple))
-                    print(a_dv.shape, a_dv.stride)
 
             if numpy.isscalar(a) or not isinstance(a, numpy.ndarray):
                 ret.append(b)
