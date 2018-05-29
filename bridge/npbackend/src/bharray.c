@@ -122,7 +122,7 @@ void *bharray_bhc(BhArray *ary) {
         ary->view = ex_view;
 
         PyObject *iterator = PyImport_ImportModule("bohrium.iterator");
-        PyObject_CallMethod(iterator, "slidin", "O", ary);
+        PyObject_CallMethod(iterator, "add_slide_info", "O", ary);
     } else if(!bhview_identical(&ary->view, &ex_view)) {
         assert(ary->bhc_array != NULL);
         void *new = bhc_view(ex_dtype, ary->bhc_array, ex_view.ndim, ex_view.start, ex_view.shape, ex_view.stride);

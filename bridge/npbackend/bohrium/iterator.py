@@ -75,7 +75,7 @@ class ViewShape(Exception):
         super(ViewShape, self).__init__(error_msg)
 
 
-class dyn_view(object):
+class dynamic_view_info(object):
     def __init__(self, dst=[], sh=None, st=None):
         self.dim_slide_tuple = dst
         self.shape = sh
@@ -235,53 +235,34 @@ def slide_from_view(a, sliced):
             new_slices += (s,)
 
     try:
-        (dst, shape, strides) = a.bhc_dyn_view
-        dv = dyn_view(slides, shape, strides)
+        (dst, shape, strides) = a.bhc_dynamic_view_info
+        dv = dynamic_view_info(slides, shape, strides)
     except:
-        dv = dyn_view(slides, a.shape, a.strides)
-#    b = slide_view(a, new_slices, slides)
-#    b.bhc_dyn_view = dv
+        dv = dynamic_view_info(slides, a.shape, a.strides)
     b = a[new_slices]
-    b.bhc_dyn_view = dv
-    return b #slide_view(a, new_slices, slides)
+    b.bhc_dynamic_view_info = dv
+    return b
 
-def slidin(a):
-    from . import _bh
-
-    dv = a.bhc_dyn_view
-    if dv:
-        # Set the relevant update conditions for the new view
-#        print("slidin " + str(a))
-#        print(dv.dim_slide_tuple)
-
-#        print("slidin ", a.shape)
-        for (dim, slide, shape) in dv.dim_slide_tuple:
-#            print("dim: %d, slide: %d, shape change: %d" % (dim, slide, shape))
-            _bh.slide_view(a, dim, slide, shape, dv.shape[dim], dv.stride[dim]/8)
-
-
-def slide_view(a, s, dim_slide_tuples):
-    """Creates a dynamic view within a loop, that updates the given dimensions
-       by the given slides at the end of each iteration.
+def add_slide_info(a):
+    """Checks whether a view is dynamic and adds the relevant
+       information to the view structure within BXX if it is.
 
     Parameters
     ----------
     a : array view
         A view into an array
-    s : slicep
-        The relevant slice of the view
-    dim_slide_tuples: (int, int)[]
-        A list of (dimension, slide) pairs. For each of these pairs, the
-        dimension is updated by the slide in each iteration of a loop."""
+    from . import _bh
+    """
     from . import _bh
 
-    # Allocate a new view
-    if s:
-        b = a[s]
-    else:
-        b = a[:]
+    # Check whether the view is a dynamic view
+    dvi = a.bhc_dynamic_view_info
+    if dvi:
+        # Set the relevant update conditions for the new view
+        for (dim, slide, shape_change) in dvi.dim_slide_tuple:
+            # Stride is bytes, so it has to be diveded by 8
+            stride = dvi.stride[dim]/8
+            shape = dvi.shape[dim]
 
-    # Set the relevant update conditions for the new view
-    for (dim, slide, shape) in dim_slide_tuples:
-        _bh.slide_view(a, b, dim, slide, shape)
-    return b
+            # Add information
+            _bh.slide_view(a, dim, slide, shape_change, shape, stride)

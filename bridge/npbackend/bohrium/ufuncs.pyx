@@ -210,23 +210,6 @@ class Ufunc(object):
                 else:
                     tmp = array_create.empty_like(args[i], dtype=in_dtype)
                     tmp[...] = args[i]
-                    # dst_m = {}
-                    # if i ==0:
-                    #     for a in args:
-                    #         if bhary.check(a) and a.bhc_dyn_view:
-                    #             for (d,sl,sh) in a.bhc_dyn_view.dim_slide_tuple:
-                    #                 if dst_m.has_key(d):
-                    #                     continue
-                    #                 else:
-                    #                     dst_m[d] = (0, sh)
-
-                    #         if dst_m.keys():
-                    #             dst = []
-                    #             for key in dst_m.keys():
-                    #                 (sl, sh) = dst_m[key]
-                    #                 dst.append((key, sl, sh))
-                    #         dv = iterator.dyn_view(dst, tmp.shape,tmp.strides)
-                    #         tmp.bhc_dyn_view = dv
                     args[i] = tmp
 
         # Insert the output array
@@ -235,11 +218,8 @@ class Ufunc(object):
 
             dst_m = {}
             for a in args:
-                if bhary.check(a) and a.bhc_dyn_view:
-                    # print("dynne")
-                    # print(a.shape)
-                    # print(a.bhc_dyn_view.dim_slide_tuple)
-                    for (d,_,sh) in a.bhc_dyn_view.dim_slide_tuple:
+                if bhary.check(a) and a.bhc_dynamic_view_info:
+                    for (d,_,sh) in a.bhc_dynamic_view_info.dim_slide_tuple:
                         if dst_m.has_key(d) and sh != 0:
                             continue
                         else:
@@ -250,9 +230,8 @@ class Ufunc(object):
                 for key in dst_m.keys():
                     sh = dst_m[key]
                     dst.append((key, 0, sh))
-                dv = iterator.dyn_view(dst, outz.shape,outz.strides)
-                outz.bhc_dyn_view = dv
-#            args.insert(0, array_create.empty(out_shape, out_dtype))
+                dv = iterator.dynamic_view_info(dst, outz.shape,outz.strides)
+                outz.bhc_dynamic_view_info = dv
             args.insert(0, outz)
         else:
             args.insert(0, out)

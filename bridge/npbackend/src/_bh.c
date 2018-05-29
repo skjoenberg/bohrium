@@ -67,7 +67,7 @@ PyObject* simply_new_array(PyTypeObject *type, PyArray_Descr *descr, uint64_t nb
     ((BhArray*) ret)->data_in_bhc = 1;
 
     // !!
-    ((BhArray*) ret)->dyn_view = NULL;
+    ((BhArray*) ret)->dynamic_view_info = NULL;
 
 
     PyArray_UpdateFlags((PyArrayObject*) ret, NPY_ARRAY_UPDATE_ALL);
@@ -159,7 +159,7 @@ static PyObject* BhArray_alloc(PyTypeObject *type, Py_ssize_t nitems) {
     ((BhArray*) obj)->data_in_bhc = 0;
 
     // !!
-    ((BhArray*) obj)->dyn_view   = NULL;
+    ((BhArray*) obj)->dynamic_view_info   = NULL;
 
     return obj;
 }
@@ -427,7 +427,7 @@ static PyMethodDef BhArrayMethods[] = {
 
 static PyMemberDef BhArrayMembers[] = {
     {"bhc_mmap_allocated", T_BOOL, offsetof(BhArray, mmap_allocated), 0, "Is the base data allocated with mmap?"},
-    {"bhc_dyn_view", T_OBJECT, offsetof(BhArray, dyn_view), 0, "Is there dynamic information on the array?"},
+    {"bhc_dynamic_view_info", T_OBJECT, offsetof(BhArray, dynamic_view_info), 0, "The information regarding dynamic changes to a view within a do_while loop"},
     {NULL}  /* Sentinel */
 };
 
