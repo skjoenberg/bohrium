@@ -88,7 +88,7 @@ def get_iterator(max_iter, val):
 
     Parameters
     ----------
-    max_iter : int !! eller none? !!
+    max_iter : int
         The maximum amount of iterations of the loop. Used for checking
         boundaries.
     val : int
@@ -110,7 +110,7 @@ def get_iterator(max_iter, val):
     array([1, 2, 6, 24, 120])'''
 
     it = iterator(val)
-    setattr(it, 'max_iter', max_iter)
+    it.max_iter = max_iter
     return it
 
 
