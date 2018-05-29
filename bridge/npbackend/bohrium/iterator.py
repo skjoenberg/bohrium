@@ -76,8 +76,9 @@ class ViewShape(Exception):
 
 
 class dynamic_view_info(object):
-    def __init__(self, dst=[], sh=None, st=None):
-        self.dim_slide_tuple = dst
+    '''Object for storing information about dynamic changes to the view'''
+    def __init__(self, dc, sh, st):
+        self.dynamic_changes = dc
         self.shape = sh
         self.stride = st
 
@@ -197,29 +198,22 @@ def slide_from_view(a, sliced):
             if isinstance(s, slice):
                 #check_shape(s)
 
-                try:
-                    # Set the correct step size
-                    setattr(s.start, "step", s.start.step*s.step)
-                    setattr(s.stop, "step", s.stop.step*s.step)
-                except:
-                    pass
-
-                # Check whether the iterator stays within the array
-                try:
+                # Check whether the start/end iterator stays within the array
+                if isinstance(s.start, iterator):
                     check_bounds(a.shape, i, s.start)
                     start = s.start.offset
                     step = s.start.step
-                except:
-                    start = None
+                else:
+                    start = s.start
                     step = 0
-
-                try:
+                if isinstance(s.start, iterator):
                     check_bounds(a.shape, i, s.stop-1)
                     stop = s.stop.offset
-                except:
-                    stop = None
+                else:
+                    stop = s.stop
 
-                new_slices += (slice(start, stop),)
+                # Store the new slice
+                new_slices += (slice(start, stop, s.step),)
                 slides.append((i, step, get_shape(s)))
 
             # A single iterator (eg. a[i])
@@ -232,15 +226,32 @@ def slide_from_view(a, sliced):
                     new_slices += (slice(s.offset, s.offset+1),)
                 slides.append((i, s.step, 0))
         else:
+            # Does not contain an iterator, just pass it through
             new_slices += (s,)
 
-    try:
-        (dst, shape, strides) = a.bhc_dynamic_view_info
-        dv = dynamic_view_info(slides, shape, strides)
-    except:
-        dv = dynamic_view_info(slides, a.shape, a.strides)
+
     b = a[new_slices]
-    b.bhc_dynamic_view_info = dv
+
+    a_dvi = a.bhc_dynamic_view_info
+    if a_dvi:
+        o_shape = a_dvi.shape
+        o_stride = a_dvi.stride
+        o_dynamic_changes = a_dvi.dynamic_changes
+        new_stride = [(b.strides[i] / a.strides[i]) for i in range(b.ndim)]
+        new_slides = []
+        for (b_dim, b_slide, b_shape) in slides:
+            for (a_dim, a_slide, a_shape) in o_dynamic_changes:
+                if a_dim == b_dim:
+                    parent_stride = a.strides[a_dim] / o_stride[a_dim]
+                    b_slide = a_slide + b_slide * parent_stride
+
+            new_slides.append((b_dim, b_slide, b_shape))
+
+        dvi = dynamic_view_info(new_slides, o_shape, o_stride)
+    else:
+        dvi = dynamic_view_info(slides, a.shape, a.strides)
+
+    b.bhc_dynamic_view_info = dvi
     return b
 
 def add_slide_info(a):
@@ -259,7 +270,7 @@ def add_slide_info(a):
     dvi = a.bhc_dynamic_view_info
     if dvi:
         # Set the relevant update conditions for the new view
-        for (dim, slide, shape_change) in dvi.dim_slide_tuple:
+        for (dim, slide, shape_change) in dvi.dynamic_changes:
             # Stride is bytes, so it has to be diveded by 8
             stride = dvi.stride[dim]/8
             shape = dvi.shape[dim]

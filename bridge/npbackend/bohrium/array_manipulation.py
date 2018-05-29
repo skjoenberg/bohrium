@@ -491,8 +491,8 @@ def broadcast_arrays(*args):
             a_dv = a.bhc_dynamic_view_info
             if a_dv:
                 if args[0].bhc_dynamic_view_info:
-                    b_dst = a_dv.dim_slide_tuple
-                    o_dst = args[0].bhc_dynamic_view_info.dim_slide_tuple
+                    b_dst = a_dv.dynamic_changes
+                    o_dst = args[0].bhc_dynamic_view_info.dynamic_changes
                     new_dst = []
 
                     for (o_dim, _, o_shape) in o_dst:

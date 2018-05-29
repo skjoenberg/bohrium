@@ -219,7 +219,7 @@ class Ufunc(object):
             dst_m = {}
             for a in args:
                 if bhary.check(a) and a.bhc_dynamic_view_info:
-                    for (d,_,sh) in a.bhc_dynamic_view_info.dim_slide_tuple:
+                    for (d,_,sh) in a.bhc_dynamic_view_info.dynamic_changes:
                         if dst_m.has_key(d) and sh != 0:
                             continue
                         else:
