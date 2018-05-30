@@ -262,7 +262,6 @@ def add_slide_info(a):
     ----------
     a : array view
         A view into an array
-    from . import _bh
     """
     from . import _bh
 
