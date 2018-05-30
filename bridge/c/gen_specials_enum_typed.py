@@ -124,21 +124,6 @@ def main(args):
     }
     }\n"""
 
-#     doc = "\n// Slides the view of an array in the given dimensions, by the given strides for each iteration in a loop.\n"
-#     impl += doc; head += doc
-#     decl = "void bhc_slide_view(bhc_dtype dtype, const void *ary1, const void *ary2, size_t dim, int slide, int shape)"
-#     head += "DLLEXPORT %s;\n" % decl
-#     impl += """%s
-# {
-#     switch(dtype) {\n""" % decl
-#     for key, t in type_map.items():
-#         impl += "        case %s: bhc_slide_view_A%s_A%s((%s)ary1, (%s)ary2, dim, slide, shape); break;\n" % (key, t['name'], t['name'], t['bhc_ary'], t['bhc_ary'])
-#     impl += """        default: fprintf(stderr, "bhc_slide_view(): unknown dtype\\n"); exit(-1);
-#     }
-#     }\n"""
-
-
-# !!!!!!!!!!!!!!
     doc = "\n// Changes the offset of a view to the first item in another view.\n"
     impl += doc; head += doc
     decl = "void bhc_set_start(bhc_dtype dtype, const void *ary1, const int64_t *ary2)"
