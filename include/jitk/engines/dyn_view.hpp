@@ -48,3 +48,123 @@ void slide_views(BhIR *bhir) {
         }
     }
 }
+
+BhIR delay_iterator_array_frees(BhIR *bhir) {
+    std::unordered_set<bh_base*> index_bases;
+    for (bh_instruction &instr : bhir->instr_list) {
+        for (bh_view &view : instr.operand) {
+            if (view.start_pointer != nullptr) {
+                index_bases.insert(view.start_pointer);
+            }
+            if (view.shape_pointer != nullptr) {
+                index_bases.insert(view.shape_pointer);
+            }
+        }
+    }
+
+    std::unordered_map<bh_base*, bh_instruction> frees;
+    BhIR new_bhir(std::vector<bh_instruction>(), bhir->_syncs, bhir->getNRepeats(), bhir->getRepeatCondition());
+    for (bh_instruction &instr : bhir->instr_list) {
+        if (instr.opcode == 55) {
+            bh_base *free_base = instr.operand[0].base;
+            if (index_bases.count(free_base) > 0) {
+                frees.insert({free_base, instr});
+                continue;
+            }
+        }
+        new_bhir.instr_list.push_back(instr);
+    }
+
+    for (int i = new_bhir.instr_list.size()-1; i >= 0; i--) {
+        bh_instruction instr = new_bhir.instr_list[i];
+        for (bh_view &view : instr.operand) {
+            if (view.start_pointer != nullptr) {
+                bh_base* view_base = view.start_pointer;
+                auto search = frees.find(view_base);
+                if (search != frees.end()) {
+                    bh_instruction free = search->second;
+                    new_bhir.instr_list.insert(new_bhir.instr_list.begin()+i+1, free);
+                    frees.erase(view_base);
+                }
+            }
+
+            if (view.shape_pointer != nullptr) {
+                bh_base* view_base = view.shape_pointer;
+                auto search = frees.find(view_base);
+                if (search != frees.end()) {
+                    bh_instruction free = search->second;
+                    new_bhir.instr_list.insert(new_bhir.instr_list.begin()+i+1, free);
+                    frees.erase(view_base);
+                }
+            }
+        }
+    }
+
+    return new_bhir;
+}
+
+bool uses_array_iterators(BhIR *bhir) {
+    bool has_pointer = false;
+    for (bh_instruction &instr : bhir->instr_list) {
+        for (bh_view &view : instr.operand) {
+            if (view.uses_pointer()) {
+                has_pointer = true;
+                break;
+            }
+        }
+    }
+    return has_pointer;
+}
+
+
+BhIR* two_phase_bhirs(BhIR *bhir) {
+    BhIR* resulting_bhirs;
+
+    BhIR setup_bhir(std::vector<bh_instruction>(), bhir->_syncs, 0, nullptr);
+    BhIR execution_bhir(std::vector<bh_instruction>(), bhir->_syncs, 0, bhir->getRepeatCondition());
+
+    bool has_pointer = false;
+    for (bh_instruction &instr : bhir->instr_list) {
+        if (has_pointer) {
+            execution_bhir.instr_list.push_back(instr);
+        } else {
+            for (bh_view &view : instr.operand) {
+                if (view.uses_pointer()) {
+                    has_pointer = true;
+                    break;
+                }
+            }
+            if (not has_pointer) {
+                setup_bhir.instr_list.push_back(instr);
+            } else {
+                execution_bhir.instr_list.push_back(instr);
+            }
+        }
+    }
+
+    resulting_bhirs[0] = setup_bhir;
+    resulting_bhirs[1] = execution_bhir;
+    return resulting_bhirs;
+}
+
+void update_array_iterators(BhIR *execution_bhir) {
+    for (bh_instruction &instr : execution_bhir->instr_list) {
+        for (bh_view &view : instr.operand) {
+            if (not (view.start_pointer == nullptr)) {
+                view.start = *((int64_t*) view.start_pointer->data);
+            }
+            if (not (view.shape_pointer == nullptr)) {
+                int64_t* shapes = (int64_t*) view.shape_pointer->data;
+                for (int i=0; i < view.ndim; i++) {
+                    view.shape[i] = shapes[i];
+                }
+            }
+            if (not (view.stride_pointer == nullptr)) {
+                int64_t* strides = (int64_t*) view.stride_pointer->data;
+                for (int i=0; i < view.ndim; i++) {
+                    view.stride[i] = strides[i];
+                }
+            }
+        }
+    }
+}
