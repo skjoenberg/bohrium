@@ -487,34 +487,32 @@ def broadcast_arrays(*args):
             else:
                 raise
 
+
+        # The view/array that the broadcast is based upon
+        broadcast_array = args[0]
+        broadcast_dvi = broadcast_array.bhc_dynamic_view_info.dynamic_changes
+
         for a, b in zip(args, bargs):
-            a_dv = a.bhc_dynamic_view_info
-            if a_dv:
-                if args[0].bhc_dynamic_view_info:
-                    b_dst = a_dv.dynamic_changes
-                    o_dst = args[0].bhc_dynamic_view_info.dynamic_changes
-                    new_dst = []
+            a_dvi = a.bhc_dynamic_view_info
+            if broadcast_dvi and a != broadcast_array and a_dvi:
+                b_dvi = a_dvi.dynamic_changes
 
-                    for (o_dim, _, o_shape) in o_dst:
-                        if o_shape != 0:
-                            found = False
-                            for i in range(len(b_dst)):
-                                (dim, slide, _) = b_dst[i]
-                                if dim == o_dim:
-                                    b_dst[i] = (dim, slide, o_shape)
-                                    found = True
-                                    break
-                            if not found:
-                                b_dst.append(o_dim, 0, o_shape)
-                    b_dv = iterator.dynamic_view_info(b_dst, a_dv.shape, a_dv.stride)
+                for (broadcast_dim, _, broadcast_shape) in broadcast_dvi:
+                    if broadcast_shape != 0:
+                        found = False
+                        for i in range(len(b_dvi)):
+                            (dim, slide, _) = b_dvi[i]
+                            if dim == broadcast_dim:
+                                b_dvi[i] = (dim, slide, broadcast_shape)
+                                found = True
+                                break
+                        if not found:
+                            b_dvi.append(broadcast_dim, 0, broadcast_shape)
+                b_dvi = iterator.dynamic_view_info(b_dvi, a_dvi.shape, a_dvi.stride)
 
-                    #print("dst: " + str(b_dst))
-                    #print(a_dv.shape, a_dv.stride)
-
-                    b.bhc_dynamic_view_info = b_dv
-                else:
-
-                    b.bhc_dynamic_view_info = a.bhc_dynamic_view_info
+                b.bhc_dynamic_view_info = b_dvi
+            else:
+                b.bhc_dynamic_view_info = a.bhc_dynamic_view_info
 
             if numpy.isscalar(a) or not isinstance(a, numpy.ndarray):
                 ret.append(b)

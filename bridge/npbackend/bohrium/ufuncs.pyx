@@ -214,25 +214,31 @@ class Ufunc(object):
 
         # Insert the output array
         if out is None or not dtype_equal(out_dtype, out.dtype):
-            outz = array_create.empty(out_shape, out_dtype)
-
-            dst_m = {}
+            # Inherit dynamic shapes from arrays involved in the ufunc
+            dynamic_out = array_create.empty(out_shape, out_dtype)
+            shape_change = {}
             for a in args:
                 if bhary.check(a) and a.bhc_dynamic_view_info:
-                    for (d,_,sh) in a.bhc_dynamic_view_info.dynamic_changes:
-                        if dst_m.has_key(d) and sh != 0:
+                    for (dimension,_,shape) in a.bhc_dynamic_view_info.dynamic_changes:
+                        # No reason to add a change of 0 in the dimension
+                        if shape == 0:
+                            continue
+                        # If the argument views have different shape change in shape
+                        # in the same dimension, the dynamic shape of the temporary
+                        # view can not be guessed
+                        elif shape_change.has_key(dimension):
+                            assert(shape_change[dimension] == shape)
                             continue
                         else:
-                            dst_m[d] = sh
-
-            if dst_m.keys():
-                dst = []
-                for key in dst_m.keys():
-                    sh = dst_m[key]
-                    dst.append((key, 0, sh))
-                dv = iterator.dynamic_view_info(dst, outz.shape,outz.strides)
-                outz.bhc_dynamic_view_info = dv
-            args.insert(0, outz)
+                            shape_change[dimension] = shape
+            if shape_change.keys():
+                dynamic_changes = []
+                for dimension in shape_change.keys():
+                    shape = shape_change[dimension]
+                    dynamic_changes.append((dimension, 0, shape))
+                out_dvi = iterator.dynamic_view_info(dynamic_changes, dynamic_out.shape,dynamic_out.strides)
+                dynamic_out.bhc_dynamic_view_info = out_dvi
+            args.insert(0, dynamic_out)
         else:
             args.insert(0, out)
 
