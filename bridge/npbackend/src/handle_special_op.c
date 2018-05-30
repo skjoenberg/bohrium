@@ -192,55 +192,6 @@ PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds) {
     Py_RETURN_NONE;
 }
 
-/* PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds) { */
-/*     PyObject *ary1; */
-/*     PyObject *ary2; */
-/*     unsigned int dim; */
-/*     int slide; */
-/*     int shape; */
-
-/*     static char *kwlist[] = {"ary1", "ary2", "dim:int", "slide:int", "slide:shape", NULL}; */
-/*     if (!PyArg_ParseTupleAndKeywords(args, kwds, "OOKKK", kwlist, &ary1, &ary2, &dim, &slide, &shape)) { */
-/*         return NULL; */
-/*     } */
-
-/*     bhc_dtype type1; */
-/*     bhc_bool constant1; */
-/*     void *operand1; */
-/*     normalize_cleanup_handle cleanup1; */
-/*     int err1 = normalize_operand(ary1, &type1, &constant1, &operand1, &cleanup1); */
-/*     cleanup1.objs2free_count = 0; */
-/*     if (err1 == -1) { */
-/*         normalize_operand_cleanup(&cleanup1); */
-/*         if (PyErr_Occurred() != NULL) { */
-/*             return NULL; */
-/*         } else { */
-/*             Py_RETURN_NONE; */
-/*         } */
-/*     } */
-
-/*     bhc_dtype type2; */
-/*     bhc_bool constant2; */
-/*     void *operand2; */
-/*     normalize_cleanup_handle cleanup2; */
-/*     int err2 = normalize_operand(ary2, &type2, &constant2, &operand2, &cleanup2); */
-/*     cleanup2.objs2free_count = 0; */
-/*     if (err2 == -1) { */
-/*         normalize_operand_cleanup(&cleanup2); */
-/*         if (PyErr_Occurred() != NULL) { */
-/*             return NULL; */
-/*         } else { */
-/*             Py_RETURN_NONE; */
-/*         } */
-/*     } */
-
-/*     bhc_slide_view(type1, operand1, operand2, dim, slide, shape); */
-/*     normalize_operand_cleanup(&cleanup1); */
-/*     normalize_operand_cleanup(&cleanup2); */
-
-/*     Py_RETURN_NONE; */
-/* } */
-
 
 PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds) {
     PyObject *ary1;
