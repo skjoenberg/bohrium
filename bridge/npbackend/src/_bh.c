@@ -65,8 +65,6 @@ PyObject* simply_new_array(PyTypeObject *type, PyArray_Descr *descr, uint64_t nb
     ((BhArray*) ret)->base.flags |= NPY_ARRAY_CARRAY;
     ((BhArray*) ret)->mmap_allocated = 1;
     ((BhArray*) ret)->data_in_bhc = 1;
-
-    // !!
     ((BhArray*) ret)->dynamic_view_info = NULL;
 
 
@@ -157,8 +155,6 @@ static PyObject* BhArray_alloc(PyTypeObject *type, Py_ssize_t nitems) {
     ((BhArray*) obj)->bhc_array = NULL;
     ((BhArray*) obj)->view.initiated = 0;
     ((BhArray*) obj)->data_in_bhc = 0;
-
-    // !!
     ((BhArray*) obj)->dynamic_view_info   = NULL;
 
     return obj;
@@ -648,6 +644,10 @@ static PyObject* BhArray_GetItem(PyObject *o, PyObject *k) {
     PyObject* iterator_check = PyObject_CallMethod(iterator, "has_iterator", "O", k);
     if (iterator_check == Py_True) {
         return PyObject_CallMethod(iterator, "slide_from_view", "OO", o, k);
+    }
+
+    if(((BhArray*) o)->dynamic_view_info && ((BhArray*) o)->dynamic_view_info != Py_None) {
+        return PyObject_CallMethod(iterator, "inherit_dynamic_changes", "OO", o, k);
     }
 
     if (obj_is_a_bool_mask(o, k)) {

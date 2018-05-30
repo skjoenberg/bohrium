@@ -490,26 +490,30 @@ def broadcast_arrays(*args):
 
         # The view/array that the broadcast is based upon
         broadcast_array = args[0]
-        broadcast_dvi = broadcast_array.bhc_dynamic_view_info.dynamic_changes
+        try:
+            broadcast_dvi = broadcast_array.bhc_dynamic_view_info.dynamic_changes
+        except:
+            broadcast_dvi = None
 
         for a, b in zip(args, bargs):
             a_dvi = a.bhc_dynamic_view_info
-            if broadcast_dvi and a != broadcast_array and a_dvi:
-                b_dvi = a_dvi.dynamic_changes
+            if broadcast_dvi and a_dvi:
+                a_dc  = a_dvi.dynamic_changes
+                b_dvi = a_dvi
+                b_dc  = b_dvi.dynamic_changes
 
                 for (broadcast_dim, _, broadcast_shape) in broadcast_dvi:
                     if broadcast_shape != 0:
                         found = False
-                        for i in range(len(b_dvi)):
-                            (dim, slide, _) = b_dvi[i]
+                        for i in range(len(a_dc)):
+                            (dim, slide, _) = a_dc[i]
                             if dim == broadcast_dim:
-                                b_dvi[i] = (dim, slide, broadcast_shape)
+                                b_dc[i] = (dim, slide, broadcast_shape)
                                 found = True
                                 break
                         if not found:
-                            b_dvi.append(broadcast_dim, 0, broadcast_shape)
-                b_dvi = iterator.dynamic_view_info(b_dvi, a_dvi.shape, a_dvi.stride)
-
+                            b_dc.append((broadcast_dim, 0, broadcast_shape))
+                b_dvi = iterator.dynamic_view_info(b_dc, a_dvi.shape, a_dvi.stride)
                 b.bhc_dynamic_view_info = b_dvi
             else:
                 b.bhc_dynamic_view_info = a.bhc_dynamic_view_info

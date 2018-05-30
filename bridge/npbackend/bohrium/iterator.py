@@ -83,6 +83,15 @@ class dynamic_view_info(object):
         self.stride = st
 
 
+def inherit_dynamic_changes(a, sliced):
+    dvi = a.bhc_dynamic_view_info
+    a.bhc_dynamic_view_info = None
+    b = a[sliced]
+    b.bhc_dynamic_view_info = dvi
+    a.bhc_dynamic_view_info = dvi
+    return b
+
+
 def get_iterator(max_iter, val):
     '''Returns an iterator with a given starting value. An iterator behaves like
        an integer, but is used to slide view between loop iterations.
@@ -192,6 +201,8 @@ def slide_from_view(a, sliced):
 
     new_slices = ()
     slides = []
+    has_slices = reduce((lambda x, y: x or y), [isinstance(s, slice) for s in sliced])
+
     for i, s in enumerate(sliced):
         if len(sliced) == 1 or has_iterator(s):
             # A slice with optional step size (eg. a[i:i+2] or a[i:i+2:2])
@@ -206,7 +217,7 @@ def slide_from_view(a, sliced):
                 else:
                     start = s.start
                     step = 0
-                if isinstance(s.start, iterator):
+                if isinstance(s.stop, iterator):
                     check_bounds(a.shape, i, s.stop-1)
                     stop = s.stop.offset
                 else:
@@ -220,10 +231,12 @@ def slide_from_view(a, sliced):
             else:
                 # Check whether the iterator stays within the array
                 check_bounds(a.shape, i, s)
-                if s.offset == -1:
-                    new_slices += (slice(s.offset, None),)
-                else:
+                if not has_slices:
                     new_slices += (slice(s.offset, s.offset+1),)
+                else:
+                    new_slices += (s.offset,)
+#                if s.offset == -1:
+#                    new_slices += (slice(s.offset, None),)
                 slides.append((i, s.step, 0))
         else:
             # Does not contain an iterator, just pass it through
