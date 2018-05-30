@@ -225,27 +225,6 @@ def main(args):
 
 """ % t
 
-#     doc = "\n// Slides the view of an array in the given dimensions, by the given strides for each iteration in a loop.\n"
-#     impl += doc; head += doc
-#     for key, t in type_map.items():
-#         decl = "void bhc_slide_view"
-#         decl += "_A%(name)s_A%(name)s" % t
-#         decl += "(const %(bhc_ary)s ary1, const %(bhc_ary)s ary2, size_t dim, int slide, int shape)" % t
-#         head += "DLLEXPORT %s;\n" % decl
-#         impl += "%s" % decl
-#         impl += """\
-# {
-#    bhxx::Runtime::instance().slide_view(
-#         (bhxx::BhArray<%(cpp)s>*) ary1,
-#         (bhxx::BhArray<%(cpp)s>*) ary2,
-#         dim,
-#         slide,
-#         shape);
-# }
-
-# """ % t
-
-
     doc = "\n// Set start of an array to the first element of another view.\n"
     impl += doc; head += doc
     for key, t in type_map.items():
