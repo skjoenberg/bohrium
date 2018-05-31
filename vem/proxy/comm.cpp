@@ -22,11 +22,11 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <boost/asio.hpp>
 #include <thread>         // std::this_thread::sleep_for
 #include <chrono>         // std::chrono::seconds
+#include <zlib.h>
+#include <bh_main_memory.hpp>
 
 #include "serialize.hpp"
 #include "comm.hpp"
-
-#include "zlib.h"
 
 
 using boost::asio::ip::tcp;
@@ -55,14 +55,13 @@ void comm_recv_array_data(boost::asio::ip::tcp::socket &socket, bh_base *base) {
 
     if (size[0] > 0) {
         bh_data_malloc(base);
-        const size_t org_size = bh_base_size(base);
-        size_t new_size = org_size;
+        size_t new_size = base->nbytes();
 
         vector<char> compressed(size[0]);
         boost::asio::read(socket, boost::asio::buffer(compressed));
 
         uncompress((Bytef *) base->data, &new_size, (Bytef *) (&compressed[0]), compressed.size());
-        assert(new_size == org_size);
+        assert(new_size == base->nbytes());
     }
 }
 }
@@ -97,7 +96,7 @@ CommFrontend::CommFrontend(int stack_level, const std::string &address, int port
     }
     throw runtime_error("[PROXY-VEM] No connection!");
 
-connected:
+    connected:
     // Serialize message body
     vector<char> buf_body;
     msg::Init body(stack_level);
@@ -126,11 +125,24 @@ CommFrontend::~CommFrontend() {
 }
 
 void CommFrontend::send_array_data(const bh_base *base) {
-    comm_send_array_data(socket, base->data, bh_base_size(base));
+    comm_send_array_data(socket, base->data, base->nbytes());
 }
 
 void CommFrontend::recv_array_data(bh_base *base) {
     comm_recv_array_data(socket, base);
+}
+
+std::string CommFrontend::read() {
+    vector<char> str_vec;
+    while(1) {
+        char buf;
+        size_t bytes = boost::asio::read(socket, boost::asio::buffer(&buf, 1));
+        if (bytes != 1 or buf == '\0') {
+            break;
+        }
+        str_vec.push_back(buf);
+    }
+    return std::string(str_vec.begin(), str_vec.end());
 }
 
 CommBackend::CommBackend(const std::string &address, int port) : socket(io_service) {
