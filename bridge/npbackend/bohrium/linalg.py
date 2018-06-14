@@ -16,7 +16,6 @@ from numpy_force.linalg import *
 from . import bhary
 from . import ufuncs
 from . import array_create
-from . import loop
 from ._util import dtype_equal
 from .bhary import fix_biclass_wrapper
 
@@ -26,47 +25,11 @@ def gauss(a):
     """
     Performe Gausian elimination on matrix a without pivoting
     """
-
-    dw = False
-    if dw:
-        def loop_body(a):
-            c = get_iterator(1)
-            x1 = a[c:, c - 1:]
-#            x2 = (a[c:, c - 1, None] / a[c - 1, c - 1:c, None])#[:, None]
-            x2 = a[c:, c - 1] / a[c - 1, c - 1:c]
-#            x2 = a[c:, c - 1] / a[c - 1, c - 1:c]
-#            x2 = (a[c:, c - 1] / a[c - 1, c - 1:c])[:, None]
-            x3 = a[c - 1, c - 1:]
-            x1 = x1 - x2 * x3
-        loop.do_while(loop_body, a.shape[0]-2, a)
-        a /= np.diagonal(a)[:, None]
-        return a
-    else:
-        for c in range(1, a.shape[0]):
-            x1 = a[c:, c - 1:]
-            x2 = (a[c:, c - 1] / a[c - 1, c - 1:c])[:, None]
-            x3 = a[c - 1, c - 1:]
-            x1 = x1 - x2 * x3
-#            a[c:, c - 1:] = a[c:, c - 1:] - (a[c:, c - 1] / a[c - 1, c - 1:c]) * a[c - 1, c - 1:]
-            np.flush()
-        a /= np.diagonal(a)[:, None]
-        return a
-
-        # for c in range(1, a.shape[0]):
-        #     a[c:, c - 1:] = a[c:, c - 1:] - (a[c:, c - 1] / a[c - 1, c - 1:c])[:, None] * a[c - 1, c - 1:]
-        #     np.flush()
-        # a /= np.diagonal(a)[:, None]
-        # return a
-
-
-
-    # for c in range(1, a.shape[0]):
-    #     a[c:, c - 1:] = a[c:, c - 1:] - (a[c:, c - 1] / a[c - 1, c - 1:c])[:, None] * a[c - 1, c - 1:]
-    #     np.flush()
-    # a /= np.diagonal(a)[:, None]
-    # return a
-
-
+    for c in range(1, a.shape[0]):
+        a[c:, c - 1:] = a[c:, c - 1:] - (a[c:, c - 1] / a[c - 1, c - 1:c])[:, None] * a[c - 1, c - 1:]
+        np.flush()
+    a /= np.diagonal(a)[:, None]
+    return a
 
 
 @fix_biclass_wrapper
@@ -121,7 +84,6 @@ def solve(a, b):
     w = gauss(np.hstack((a, b[:, np.newaxis])))
     lc = w.shape[1] - 1
     x = w[:, lc].copy()
-
     for c in range(lc - 1, 0, -1):
         x[:c] -= w[:c, c] * x[c:c + 1]
         np.flush()
