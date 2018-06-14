@@ -231,7 +231,7 @@ def main(args):
         decl = "void bhc_set_start"
         decl += "_A%(name)s_Aint64" % t
         decl += "(const %(bhc_ary)s ary1, const bhc_ndarray_int64_p ary2)" % t
-        head += "DLLEXPORT %s;\n" % decl
+        head += "%s;\n" % decl
         impl += "%s" % decl
         impl += """\
 {
@@ -248,7 +248,7 @@ def main(args):
         decl = "void bhc_set_shape"
         decl += "_A%(name)s_Aint64" % t
         decl += "(const %(bhc_ary)s ary1, const bhc_ndarray_int64_p ary2)" % t
-        head += "DLLEXPORT %s;\n" % decl
+        head += "%s;\n" % decl
         impl += "%s" % decl
         impl += """\
 {
@@ -265,7 +265,7 @@ def main(args):
         decl = "void bhc_set_stride"
         decl += "_A%(name)s_Aint64" % t
         decl += "(const %(bhc_ary)s ary1, const bhc_ndarray_int64_p ary2)" % t
-        head += "DLLEXPORT %s;\n" % decl
+        head += "%s;\n" % decl
         impl += "%s" % decl
         impl += """\
 {

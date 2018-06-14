@@ -127,7 +127,7 @@ def main(args):
     doc = "\n// Changes the offset of a view to the first item in another view.\n"
     impl += doc; head += doc
     decl = "void bhc_set_start(bhc_dtype dtype, const void *ary1, const int64_t *ary2)"
-    head += "DLLEXPORT %s;\n" % decl
+    head += "%s;\n" % decl
     impl += """%s
 {
     switch(dtype) {\n""" % decl
@@ -140,7 +140,7 @@ def main(args):
     doc = "\n// Changes the shape of ary1 to the `ndim` first values of ary2.\n"
     impl += doc; head += doc
     decl = "void bhc_set_shape(bhc_dtype dtype, const void *ary1, const void *ary2)"
-    head += "DLLEXPORT %s;\n" % decl
+    head += "%s;\n" % decl
     impl += """%s
 {
     switch(dtype) {\n""" % decl
@@ -153,7 +153,7 @@ def main(args):
     doc = "\n// Changes the stride of ary1 to the `ndim` first values of ary2.\n"
     impl += doc; head += doc
     decl = "void bhc_set_stride(bhc_dtype dtype, const void *ary1, const void *ary2)"
-    head += "DLLEXPORT %s;\n" % decl
+    head += "%s;\n" % decl
     impl += """%s
 {
     switch(dtype) {\n""" % decl
