@@ -1,4 +1,5 @@
 import bohrium as bh
+import exceptions
 from .bhary import fix_biclass_wrapper
 #from . import _bh
 
@@ -13,11 +14,15 @@ def is_index_array(idx):
 
 @fix_biclass_wrapper
 def has_index_array(*idx):
-    if len(idx) == 1 and isinstance(idx[0], slice):
-        return (is_index_array(idx[0].start) or
-                is_index_array(idx[0].stop))
-    else:
-        return is_index_array(idx)
+    for s in idx:
+        if isinstance(s, slice):
+            if (is_index_array(s.start) or
+                is_index_array(s.stop)):
+                return True
+        else:
+            if is_index_array(s):
+                return True
+    return False
 
 
 @fix_biclass_wrapper
@@ -31,28 +36,54 @@ def dynamic_get_item(a, indices):
     from . import _bh
     if not isinstance(indices, tuple):
         indices = (indices,)
-    b = a
 
     offset_array = index()
-#    offset_array += a.offset
     for dim, idx in enumerate(indices):
-        if isinstance(idx, slice):
-            offset = idx.start
-        else:
-            offset = idx
-        offset_array += (a.strides[dim]/8) * offset
+        try:
+            if isinstance(idx, slice):
+                offset = idx.start[0:1]
+            else:
+                offset = idx[0:1]
+            offset_array += (a.strides[dim]/8) * offset
+        except exceptions.TypeError as e:
+            pass
 
+    has_slice = reduce(lambda x,y: x or y, [isinstance(idx, slice) for idx in indices])
+    has_slice = has_slice or len(indices) < a.ndim
+    new_indices = ()
     shape_array = index(len(indices))
     contains_index_arrays = False
     for dim, idx in enumerate(indices):
         if isinstance(idx, slice):
-# #            shape_array[dim] += idx.stop[0] - idx.start[0]
-            shape_array[dim:dim+1] += idx.stop - idx.start
-        else:
-            shape_array[dim] += 1
-    _bh.set_start(b, offset_array)
-    _bh.set_shape(b, shape_array)
+            print(type(idx.start),type(idx.stop))
+            try:
+                start = idx.start[0]
+            except:
+                start = 0
 
+            try:
+                stop = idx.stop[0]
+            except:
+                stop = a.shape[dim]-1
+
+            shape_array[dim:dim+1] += stop - start
+            new_indices = new_indices + (slice(int(start),int(stop)),)
+        else:
+            shape_array[dim:dim+1] = 1
+            if has_slice:
+                new_indices = new_indices + (idx,)
+            else:
+                new_indices = new_indices + (slice(int(idx),int(idx)+1),)
+
+    if len(new_indices) < a.ndim:
+        for _ in range(a.ndim - len(new_indices)):
+            new_indices = new_indices + (slice(None, None, None),)
+
+#    b = a.copy()
+#    print(shape_array)
+    b = a[new_indices]
+#    _bh.set_start(b, offset_array)
+#    _bh.set_shape(b, shape_array)
     return b
 
 

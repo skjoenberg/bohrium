@@ -209,7 +209,7 @@ def main(args):
     for key, t in type_map.items():
         decl = "void bhc_slide_view"
         decl += "_A%(name)s" % t
-        decl += "(const %(bhc_ary)s ary1, size_t dim, int slide, int view_shape, int array_shape, int array_stride)" % t
+        decl += "(const %(bhc_ary)s ary1, size_t dim, int slide, int view_shape, int array_shape, int array_stride, int step_delay)" % t
         head += "%s;\n" % decl
         impl += "%s" % decl
         impl += """\
@@ -220,10 +220,30 @@ def main(args):
         slide,
         view_shape,
         array_shape,
-        array_stride);
+        array_stride,
+        step_delay);
 }
 
 """ % t
+
+    doc = "\n// Set a reset for an iterator in a dynamic view within a loop.\n"
+    impl += doc; head += doc
+    for key, t in type_map.items():
+        decl = "void bhc_add_reset"
+        decl += "_A%(name)s" % t
+        decl += "(const %(bhc_ary)s ary1, size_t dim, size_t reset_max)" % t
+        head += "%s;\n" % decl
+        impl += "%s" % decl
+        impl += """\
+{
+   bhxx::Runtime::instance().add_reset(
+        (bhxx::BhArray<%(cpp)s>*) ary1,
+        dim,
+        reset_max);
+}
+
+""" % t
+
 
     doc = "\n// Set start of an array to the first element of another view.\n"
     impl += doc; head += doc

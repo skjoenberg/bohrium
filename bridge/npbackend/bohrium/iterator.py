@@ -11,10 +11,12 @@ class iterator(object):
     Supports addition, subtraction and multiplication.
     '''
 
-    def __init__(self, value):
+    def __init__(self, value, step_delay=1, reset=[]):
         self.step = 1
         self.offset = value
         self.max_iter = 0
+        self.step_delay=step_delay
+        self.reset = reset
 
     def __add__(self, other):
         new_it = copy.copy(self)
@@ -59,8 +61,9 @@ class IteratorOutOfBounds(Exception):
     '''Exception thrown when a view goes out of bounds after the maximum
        iterations.'''
     def __init__(self, dim, shape, first_index, last_index):
-        error_msg = "\n    Iterator out of bounds:\n" \
-                    "     Dimension %d has length %d, iterator starts from %d and goes to %d." \
+        error_msg = \
+            "\n    Iterator out of bounds:\n" \
+            "     Dimension %d has length %d, iterator starts from %d and goes to %d." \
                     % (dim, shape, first_index, last_index)
         super(IteratorOutOfBounds, self).__init__(error_msg)
 
@@ -68,31 +71,68 @@ class IteratorOutOfBounds(Exception):
 class ViewShape(Exception):
     '''Exception thrown when a view changes shape between iterations in a
        loop.'''
+    # Obsolete after changes to shape has been implemented
     def __init__(self, start,stop):
-        error_msg = "\n    View must not change shape between iterations:\n" \
-                    "    Stride of view start is %d, stride of view end is %d." \
+        error_msg = \
+            "\n    View must not change shape between iterations:\n" \
+            "    Stride of view start is %d, stride of view end is %d." \
                     % (start, stop)
         super(ViewShape, self).__init__(error_msg)
 
 
 class dynamic_view_info(object):
     '''Object for storing information about dynamic changes to the view'''
-    def __init__(self, dc, sh, st):
-        self.dynamic_changes = dc
+    def __init__(self, dc, sh, st, rs=[]):
+        # Shape and stride of the view that the dynamic view is based upon
         self.shape = sh
         self.stride = st
 
+        assert(len(dc[0]) == 3 or len(dc[0]) == 4)
+        if len(dc[0]) == 3:
+            self.dynamic_changes = []
+            for (dim, slide, shape_change) in dc:
+                self.dynamic_changes.append((dim, slide, shape_change, 1))
+        else:
+            # The dynamic changes. Type: [(dimension, slide, shape)]
+            self.dynamic_changes = dc
+
+        self.resets = rs
+
 
 def inherit_dynamic_changes(a, sliced):
+    '''Create a view into a dynamic view, that keeps the same dynamic changes'''
+    # Temporary store the dynamic changes
     dvi = a.bhc_dynamic_view_info
+
+    # Remove the dynamic changes to avoid infinite recursion
+    # and perform slicing
     a.bhc_dynamic_view_info = None
     b = a[sliced]
+
+    # Inherit the dynamic changes
     b.bhc_dynamic_view_info = dvi
     a.bhc_dynamic_view_info = dvi
     return b
 
 
-def get_iterator(max_iter, val):
+def get_grid(*args):
+    max_iter = args[0]
+    iterators = ()
+    grid = args[1:][::-1]
+
+    print(max_iter)
+    print(args)
+    print(grid)
+    step_delay = 1
+    for dim, iterations in enumerate(grid):
+        i = get_iterator(max_iter, 0, step_delay)
+        i.reset.append((dim, iterations))
+        step_delay *= iterations
+        iterators = iterators + (i,)
+
+    return iterators
+
+def get_iterator(max_iter, val, step_delay=1):
     '''Returns an iterator with a given starting value. An iterator behaves like
        an integer, but is used to slide view between loop iterations.
 
@@ -121,6 +161,7 @@ def get_iterator(max_iter, val):
 
     it = iterator(val)
     it.max_iter = max_iter
+    it.step_delay = step_delay
     return it
 
 
@@ -201,6 +242,7 @@ def slide_from_view(a, sliced):
 
     new_slices = ()
     slides = []
+    resets = []
     has_slices = reduce((lambda x, y: x or y), [isinstance(s, slice) for s in sliced])
 
     for i, s in enumerate(sliced):
@@ -209,23 +251,34 @@ def slide_from_view(a, sliced):
             if isinstance(s, slice):
                 #check_shape(s)
 
+                start_is_iterator = isinstance(s.start, iterator)
+                stop_is_iterator = isinstance(s.stop, iterator)
+                if start_is_iterator and stop_is_iterator:
+                    assert(s.start.reset == s.stop.reset)
+
                 # Check whether the start/end iterator stays within the array
-                if isinstance(s.start, iterator):
+                if start_is_iterator:
                     check_bounds(a.shape, i, s.start)
                     start = s.start.offset
                     step = s.start.step
+                    step_delay = s.start.step_delay
+                    reset = s.start.reset
                 else:
                     start = s.start
                     step = 0
-                if isinstance(s.stop, iterator):
+                    step_delay = 1
+
+                if stop_is_iterator:
                     check_bounds(a.shape, i, s.stop-1)
                     stop = s.stop.offset
+                    reset = s.start.reset
                 else:
                     stop = s.stop
 
                 # Store the new slice
                 new_slices += (slice(start, stop, s.step),)
-                slides.append((i, step, get_shape(s)))
+                slides.append((i, step, get_shape(s), step_delay))
+                resets += reset
 
             # A single iterator (eg. a[i])
             else:
@@ -235,9 +288,11 @@ def slide_from_view(a, sliced):
                     new_slices += (slice(s.offset, s.offset+1),)
                 else:
                     new_slices += (s.offset,)
+
 #                if s.offset == -1:
 #                    new_slices += (slice(s.offset, None),)
-                slides.append((i, s.step, 0))
+                slides.append((i, s.step, 0, s.step_delay))
+                resets += s.reset
         else:
             # Does not contain an iterator, just pass it through
             new_slices += (s,)
@@ -252,18 +307,21 @@ def slide_from_view(a, sliced):
         o_dynamic_changes = a_dvi.dynamic_changes
         new_stride = [(b.strides[i] / a.strides[i]) for i in range(b.ndim)]
         new_slides = []
-        for (b_dim, b_slide, b_shape) in slides:
-            for (a_dim, a_slide, a_shape) in o_dynamic_changes:
+        for (b_dim, b_slide, b_shape, b_step_delay) in slides:
+            for (a_dim, a_slide, a_shape, a_step_delay) in o_dynamic_changes:
                 if a_dim == b_dim:
                     parent_stride = a.strides[a_dim] / o_stride[a_dim]
                     b_slide = a_slide + b_slide * parent_stride
 
-            new_slides.append((b_dim, b_slide, b_shape))
+            new_slides.append((b_dim, b_slide, b_shape, b_step_delay))
 
         dvi = dynamic_view_info(new_slides, o_shape, o_stride)
     else:
         dvi = dynamic_view_info(slides, a.shape, a.strides)
 
+
+    dvi.resets = resets
+    print(dvi.resets)
     b.bhc_dynamic_view_info = dvi
     return b
 
@@ -280,12 +338,16 @@ def add_slide_info(a):
 
     # Check whether the view is a dynamic view
     dvi = a.bhc_dynamic_view_info
+
     if dvi:
         # Set the relevant update conditions for the new view
-        for (dim, slide, shape_change) in dvi.dynamic_changes:
+        for (dim, slide, shape_change, step_delay) in dvi.dynamic_changes:
             # Stride is bytes, so it has to be diveded by 8
             stride = dvi.stride[dim]/8
             shape = dvi.shape[dim]
 
             # Add information
-            _bh.slide_view(a, dim, slide, shape_change, shape, stride)
+            _bh.slide_view(a, dim, slide, shape_change, shape, stride, step_delay)
+
+        for (dim,reset_max) in dvi.resets:
+            _bh.add_reset(a, dim, reset_max)

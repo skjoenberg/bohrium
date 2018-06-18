@@ -49,6 +49,9 @@ PyObject* PySync(PyObject *self, PyObject *args, PyObject *kwds);
 /** Increases `ary`s offset by one */
 PyObject* PySlideView(PyObject *self, PyObject *args, PyObject *kwds);
 
+/** Add a reset for a given dimension. */
+PyObject* PyAddReset(PyObject *self, PyObject *args, PyObject *kwds);
+
 /** Sets the start of the first array to the first element of second array */
 PyObject* PySetStart(PyObject *self, PyObject *args, PyObject *kwds);
 

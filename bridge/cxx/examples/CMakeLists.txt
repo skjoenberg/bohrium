@@ -12,3 +12,7 @@ install(TARGETS bhxx_add DESTINATION share/bohrium/test/cxx COMPONENT bohrium)
 add_executable(bhxx_add_reduce "bhxx_add_reduce.cpp" )  # bhxx_add_reduce
 target_link_libraries(bhxx_add_reduce bhxx)             # Depends on libbhxx.so
 install(TARGETS bhxx_add_reduce DESTINATION share/bohrium/test/cxx COMPONENT bohrium)
+
+add_executable(bhxx_gauss_pivot "bhxx_gauss_pivot.cpp" )  # bhxx_gauss_pivot
+target_link_libraries(bhxx_gauss_pivot bhxx)             # Depends on libbhxx.so
+install(TARGETS bhxx_gauss_pivot DESTINATION share/bohrium/test/cxx COMPONENT bohrium)

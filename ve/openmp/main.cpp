@@ -134,39 +134,60 @@ Impl::~Impl() {
 }
 
 void Impl::execute(BhIR *bhir) {
+    //    printf("Goes on for %d iterations \n", bhir->getNRepeats());
+    //    printf("EXECUTE\n");
     bh_base *cond = bhir->getRepeatCondition();
     bool has_pointer = uses_array_iterators(bhir);
 
     BhIR *setup_bhir = NULL;
+    //    if (has_pointer) {
+    //        std::vector<BhIR> bhirs = two_phase_bhirs(bhir);
+    //        setup_bhir = &bhirs.at(0);
+    //        bhir = &bhirs.at(1);
+    //    }
+
     if (has_pointer) {
-        BhIR *bhirs = two_phase_bhirs(bhir);
-        setup_bhir = &bhirs[0];
-        bhir = &bhirs[1];
-    }
+        //        printf("Starting new loop with pointer. Goes on for %d iterations \n", bhir->getNRepeats());
+        BhIR new_bhir = delay_iterator_array_frees(bhir);
+        std::vector<BhIR> bhirs = bhir_splitter(&new_bhir);
+        uint64_t bhirs_size = bhirs.size();
+        BhIR cur_bhir = bhirs.at(0);
+        for (uint64_t i = 0; i < bhir->getNRepeats(); ++i) {
+            //            printf("Starting new iteration\n");
+            for (uint64_t j = 0; j < bhirs_size; j++) {
+                update_array_iterators(&cur_bhir);
+                // Let's handle extension methods
+                engine.handleExtmethod(&cur_bhir);
 
-    for (uint64_t i = 0; i < bhir->getNRepeats(); ++i) {
-        if (has_pointer) {
+                // And then the regular instructions
+                engine.handleExecution(&cur_bhir);
+
+                cur_bhir = bhirs.at((j+1)%bhirs_size);
+            }
+            // Check condition
+            if (cond != nullptr and cond->data != nullptr and not ((bool*) cond->data)[0]) {
+                break;
+            }
+        }
+    } else {
+        for (uint64_t i = 0; i < bhir->getNRepeats(); ++i) {
             // Let's handle extension methods
-            engine.handleExtmethod(*this, setup_bhir);
+            engine.handleExtmethod(bhir);
 
+            //            printf("lala\n");
             // And then the regular instructions
-            engine.handleExecution(setup_bhir);
+            engine.handleExecution(bhir);
 
-            update_array_iterators(setup_bhir);
+
+            // Check condition
+            if (cond != nullptr and cond->data != nullptr and not ((bool*) cond->data)[0]) {
+                break;
+            }
+
+            //            auto tslide = chrono::steady_clock::now();
+            // Change views that slide between iterations
+            slide_views(bhir);
+            //            stat.time_upd_iter += chrono::steady_clock::now() - tslide;
         }
-
-        // Let's handle extension methods
-        engine.handleExtmethod(bhir);
-
-        // And then the regular instructions
-        engine.handleExecution(bhir);
-
-        // Check condition
-        if (cond != nullptr and cond->data != nullptr and not ((bool*) cond->data)[0]) {
-            break;
-        }
-
-        // Change views that slide between iterations
-        slide_views(bhir);
     }
 }

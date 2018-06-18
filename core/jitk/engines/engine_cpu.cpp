@@ -59,6 +59,7 @@ void EngineCPU::handleExecution(BhIR *bhir) {
         bh_data_free(base);
     }
 
+
     // Set the constructor flag
     if (comp.config.defaultGet<bool>("array_contraction", true)) {
         setConstructorFlag(instr_list);
@@ -68,19 +69,21 @@ void EngineCPU::handleExecution(BhIR *bhir) {
         }
     }
 
+    //    const auto tlookup = chrono::steady_clock::now();
     // Let's get the kernel list
     vector<LoopB> kernel_list = get_kernel_list(instr_list, comp.config, fcache, stat, false,
                                                 comp.config.defaultGet<bool>("monolithic", true));
-
+    //    stat.time_upd_iter += chrono::steady_clock::now() - tlookup;
     for (const LoopB &kernel: kernel_list) {
         // Let's create the symbol table for the kernel
+        //        const auto tlookup = chrono::steady_clock::now();
         const SymbolTable symbols(kernel,
                                   kernel_config["use_volatile"],
                                   kernel_config["strides_as_var"],
                                   kernel_config["index_as_var"],
                                   kernel_config["const_as_var"]
         );
-
+        //        stat.time_upd_iter += chrono::steady_clock::now() - tlookup;
         stat.record(symbols);
 
         if (not kernel.isSystemOnly()) { // We can skip this step if the kernel does no computation
@@ -91,7 +94,9 @@ void EngineCPU::handleExecution(BhIR *bhir) {
                 constants.push_back(&(*instr));
             }
 
+            //            const auto tlookup = chrono::steady_clock::now();
             const auto lookup = codegen_cache.lookup(kernel, symbols);
+            //            stat.time_upd_iter += chrono::steady_clock::now() - tlookup;
             if (not lookup.first.empty()) {
                 // In debug mode, we check that the cached source code is correct
                 #ifndef NDEBUG

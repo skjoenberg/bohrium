@@ -22,6 +22,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include "BhBase.hpp"
 #include "SVector.hpp"
 #include <ostream>
+#include <unordered_map>
 
 namespace bhxx {
 
@@ -65,6 +66,10 @@ class BhArray {
     /// The relevant dimension
     std::vector<int64_t> slide_dim;
 
+    // The step delay in the dimension
+    std::vector<int64_t> slide_dim_step_delay;
+    std::vector<int64_t> slide_dim_step_delay_counter;
+
     /// The change to the shape
     std::vector<int64_t> slide_dim_shape_change;
 
@@ -73,6 +78,13 @@ class BhArray {
 
     // The relevant dimensions
     std::vector<int64_t> slide_dim_shape;
+
+    // The amount the iterator can reach, before resetting it
+    std::unordered_map<int64_t, int64_t> resets;
+
+    // The dimension to reset
+    std::vector<int64_t> reset_dim;
+
 
     // Start pointer
     bh_base* start_pointer;

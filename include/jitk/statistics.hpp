@@ -93,9 +93,11 @@ class Statistics {
     std::chrono::duration<double> time_compile{0};
     std::chrono::duration<double> time_exec{0};
     std::chrono::duration<double> time_offload{0};
+    std::chrono::duration<double> time_upd_iter{0};
     std::chrono::duration<double> time_copy2dev{0};
     std::chrono::duration<double> time_copy2host{0};
     std::chrono::duration<double> time_ext_method{0};
+
 
     // key: kernel source filename, value: kernel statistics
     std::map<std::string, KernelStats> time_per_kernel;
@@ -149,6 +151,7 @@ class Statistics {
             out << "  Copy2dev:                      " << YEL << time_copy2dev.count() << "s"        << "\n" << RST;
             out << "  Copy2host:                     " << YEL << time_copy2host.count() << "s"       << "\n" << RST;
             out << "  Offload:                       " << YEL << time_offload.count() << "s"         << "\n" << RST;
+            out << "  Updating iterators:            " << YEL << time_upd_iter.count() << "s"        << "\n" << RST;
             out << "  Other:                         " << YEL << timeOther() << "s"                  << "\n" << RST;
             out << "Ext-method:                      " << YEL << time_ext_method.count() << "s"      << "\n" << RST;
             out << "\n";

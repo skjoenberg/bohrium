@@ -82,6 +82,13 @@ void BhInstruction::appendOperand(const BhArray<T>& ary) {
     view.slide_dim_stride = ary.slide_dim_stride;
     view.slide_dim_shape = ary.slide_dim_shape;
 
+    view.slide_dim_step_delay = ary.slide_dim_step_delay;
+
+    view.resets = ary.resets;
+
+
+    //    view.slide_dim_step_delay_counter = ary.slide_dim_step_delay_counter;
+
     view.start_pointer = ary.start_pointer;
     view.shape_pointer = ary.shape_pointer;
     view.stride_pointer = ary.stride_pointer;

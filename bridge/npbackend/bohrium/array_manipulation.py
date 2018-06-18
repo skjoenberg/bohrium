@@ -502,17 +502,17 @@ def broadcast_arrays(*args):
                 b_dvi = a_dvi
                 b_dc  = b_dvi.dynamic_changes
 
-                for (broadcast_dim, _, broadcast_shape) in broadcast_dvi:
+                for (broadcast_dim, _, broadcast_shape, broadcast_step_delay) in broadcast_dvi:
                     if broadcast_shape != 0:
                         found = False
                         for i in range(len(a_dc)):
-                            (dim, slide, _) = a_dc[i]
+                            (dim, slide, _, _) = a_dc[i]
                             if dim == broadcast_dim:
-                                b_dc[i] = (dim, slide, broadcast_shape)
+                                b_dc[i] = (dim, slide, broadcast_shape, broadcast_step_delay)
                                 found = True
                                 break
                         if not found:
-                            b_dc.append((broadcast_dim, 0, broadcast_shape))
+                            b_dc.append((broadcast_dim, 0, broadcast_shape, broadcast_step_delay))
                 b_dvi = iterator.dynamic_view_info(b_dc, a_dvi.shape, a_dvi.stride)
                 b.bhc_dynamic_view_info = b_dvi
             else:

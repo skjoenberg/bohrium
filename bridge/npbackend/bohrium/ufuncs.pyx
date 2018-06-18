@@ -226,7 +226,8 @@ class Ufunc(object):
             shape_change = {}
             for a in args:
                 if bhary.check(a) and a.bhc_dynamic_view_info:
-                    for (dimension,_,shape) in a.bhc_dynamic_view_info.dynamic_changes:
+                    print("EHHHHHEJJJ")
+                    for (dimension,_,shape,step_delay) in a.bhc_dynamic_view_info.dynamic_changes:
                         # No reason to add a change of 0 in the dimension
                         if shape == 0:
                             continue
@@ -234,15 +235,17 @@ class Ufunc(object):
                         # in the same dimension, the dynamic shape of the temporary
                         # view can not be guessed
                         elif shape_change.has_key(dimension):
-                            assert(shape_change[dimension] == shape)
+                            assert(shape_change[dimension][0] == shape)
+                            assert(shape_change[dimension][1] == step_delay)
+                            print("shape: "+str(shape)+" ,sd: "+str(step_delay))
                             continue
                         else:
-                            shape_change[dimension] = shape
+                            shape_change[dimension] = (shape, step_delay)
             if shape_change.keys():
                 dynamic_changes = []
                 for dimension in shape_change.keys():
-                    shape = shape_change[dimension]
-                    dynamic_changes.append((dimension, 0, shape))
+                    shape, step_delay = shape_change[dimension]
+                    dynamic_changes.append((dimension, 0, shape, step_delay))
                 out_dvi = iterator.dynamic_view_info(dynamic_changes, dynamic_out.shape,dynamic_out.strides)
                 dynamic_out.bhc_dynamic_view_info = out_dvi
             args.insert(0, dynamic_out)

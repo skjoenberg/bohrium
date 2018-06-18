@@ -522,11 +522,11 @@ static int BhArray_SetItem(PyObject *o, PyObject *k, PyObject *v) {
         return -1;
     }
 
-    /* PyObject* array_index_check = PyObject_CallMethod(array_iterator, "has_index_array", "O", k); */
-    /* if (array_index_check == Py_True) { */
-    /*     PyObject_CallMethod(array_iterator, "dynamic_set_item", "OOO", o, k, v); */
-    /*     return 0; */
-    /* } */
+    PyObject* array_index_check = PyObject_CallMethod(array_iterator, "has_index_array", "O", k);
+    if (array_index_check == Py_True) {
+        PyObject_CallMethod(array_iterator, "dynamic_set_item", "OOO", o, k, v);
+        return 0;
+    }
 
     // Let's handle assignments to a boolean masked array
     if (obj_is_a_bool_mask(o, k)) {
@@ -637,10 +637,10 @@ static PyObject* BhArray_GetItem(PyObject *o, PyObject *k) {
     assert(BhArray_CheckExact(o));
 
     // Indexing with arrays
-    /* PyObject* array_index_check = PyObject_CallMethod(array_iterator, "has_index_array", "O", k); */
-    /* if (array_index_check == Py_True) { */
-    /*     return PyObject_CallMethod(array_iterator, "dynamic_get_item", "OO", o, k); */
-    /* } */
+    PyObject* array_index_check = PyObject_CallMethod(array_iterator, "has_index_array", "O", k);
+    if (array_index_check == Py_True) {
+        return PyObject_CallMethod(array_iterator, "dynamic_get_item", "OO", o, k);
+    }
 
     // Iterator stuff
     PyObject* iterator_check = PyObject_CallMethod(iterator, "has_iterator", "O", k);
@@ -928,6 +928,8 @@ static PyMethodDef _bhMethods[] = {
             "Sync `ary` to host memory."},
     {"slide_view", (PyCFunction) PySlideView, METH_VARARGS | METH_KEYWORDS,
             "Increase `ary`s offset by one."},
+    {"add_reset", (PyCFunction) PyAddReset, METH_VARARGS | METH_KEYWORDS,
+            "Add a reset for a given dimension."},
     {"set_start", (PyCFunction) PySetStart, METH_VARARGS | METH_KEYWORDS,
      "Set the start of one array to the first element of another."},
     {"set_shape", (PyCFunction) PySetShape, METH_VARARGS | METH_KEYWORDS,

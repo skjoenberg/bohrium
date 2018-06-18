@@ -31,6 +31,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include "bh_base.hpp"
 #include <bh_constant.hpp>
 #include <boost/serialization/split_member.hpp>
+#include <unordered_map>
 
 // Forward declaration of class boost::serialization::access
 namespace boost { namespace serialization { class access; }}
@@ -64,6 +65,12 @@ struct bh_view {
         slide_dim_shape_change = view.slide_dim_shape_change;
         slide_dim_stride = view.slide_dim_stride;
         slide_dim_shape = view.slide_dim_shape;
+        slide_dim_step_delay = view.slide_dim_step_delay;
+        slide_dim_step_delay_counter = view.slide_dim_step_delay_counter;
+
+        resets = view.resets;
+
+        iteration_counter = view.iteration_counter;
 
         start_pointer = view.start_pointer;
         shape_pointer = view.shape_pointer;
@@ -88,20 +95,41 @@ struct bh_view {
     /// The stride for each dimensions
     int64_t stride[BH_MAXDIM];
 
-    /// Dimensions to be slided each loop iterations
+
+    // Information used for dynamic views within internal loops
+
+    // Dimensions to be slided each loop iterations
     std::vector<int64_t> slide;
 
-    /// The relevant dimension
+    // The relevant dimension
     std::vector<int64_t> slide_dim;
 
-    /// The change to the shape
+
+    // The step delay in the dimension
+    std::vector<int64_t> slide_dim_step_delay;
+    std::vector<int64_t> slide_dim_step_delay_counter;
+
+    int64_t iteration_counter = 0;
+
+    // The change to the shape
     std::vector<int64_t> slide_dim_shape_change;
 
-    /// The strides these dimensions is slided each dynamically
+    // The strides these dimensions is slided each dynamically
     std::vector<int64_t> slide_dim_stride;
 
-    /// The shape of the given dimension (used for negative indices)
+    // The shape of the given dimension (used for negative indices)
     std::vector<int64_t> slide_dim_shape;
+
+    // The amount the iterator can reach, before resetting it
+    std::unordered_map<int64_t, int64_t> resets;
+    //    std::vector<int64_t> reset_max;
+
+    // The dimension to reset
+    std::vector<int64_t> reset_dim;
+
+    // The dimension to reset
+    int64_t reset_counter = 0;
+
 
     // Start pointer
     bh_base* start_pointer = nullptr;

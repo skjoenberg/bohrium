@@ -88,12 +88,23 @@ class Runtime {
 
     // Change the offset of slide_view_ptr by slide for each iteration of a loop
     template <typename T>
-    void slide_view(BhArray<T>* view_ptr, size_t dim, int slide, int view_shape, int array_shape, int array_stride) {
+    void slide_view(BhArray<T>* view_ptr, size_t dim, int slide, int view_shape, int array_shape, int array_stride, int step_delay) {
         view_ptr->slide.push_back(slide);
         view_ptr->slide_dim.push_back(dim);
         view_ptr->slide_dim_shape_change.push_back(view_shape);
         view_ptr->slide_dim_stride.push_back(array_stride);
         view_ptr->slide_dim_shape.push_back(array_shape);
+        view_ptr->slide_dim_step_delay.push_back(step_delay);
+        view_ptr->slide_dim_step_delay_counter.push_back(0);
+    }
+
+    // Add a reset for an iterator. Used for nested internal loops
+    template <typename T>
+    void add_reset(BhArray<T>* view_ptr, size_t dim, size_t reset_max) {
+        view_ptr->resets.insert({dim, reset_max});
+
+            //        view_ptr->reset_dim.push_back(dim);
+            //        view_ptr->reset_max.push_back(reset_max);
     }
 
     // Change the offset of slide_view_ptr by slide for each iteration of a loopp
