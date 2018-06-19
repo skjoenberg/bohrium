@@ -85,7 +85,7 @@ void BhInstruction::appendOperand(const BhArray<T>& ary) {
     view.slide_dim_step_delay = ary.slide_dim_step_delay;
 
     view.resets = ary.resets;
-
+    view.changes_since_reset = ary.changes_since_reset;
 
     //    view.slide_dim_step_delay_counter = ary.slide_dim_step_delay_counter;
 

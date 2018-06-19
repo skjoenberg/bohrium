@@ -518,10 +518,27 @@ def broadcast_arrays(*args):
             else:
                 b.bhc_dynamic_view_info = a.bhc_dynamic_view_info
 
-            if numpy.isscalar(a) or not isinstance(a, numpy.ndarray):
-                ret.append(b)
+            print("shapes")
+            print(a.shape)
+            print(b.shape)
+
+            if a_dvi and a_dvi.array:
+                ret.append(a)
             else:
                 ret.append(b)
+            # try:
+            #     print("hey")
+            #     print(a.bhc_dynamic_view_info.array)
+
+            #     print("hej")
+            #     ret.append(a)
+            # except:
+            #     ret.append(b)
+
+#            if numpy.isscalar(a) or not isinstance(a, numpy.ndarray):
+#                ret.append(b)
+#            else:
+#                ret.append(b)
 
     except ValueError as msg:
         if str(msg).find("shape mismatch: objects cannot be broadcast to a single shape") != -1:

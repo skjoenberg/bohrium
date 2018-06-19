@@ -81,6 +81,7 @@ class BhArray {
 
     // The amount the iterator can reach, before resetting it
     std::unordered_map<int64_t, int64_t> resets;
+    std::unordered_map<int64_t, int64_t> changes_since_reset;
 
     // The dimension to reset
     std::vector<int64_t> reset_dim;

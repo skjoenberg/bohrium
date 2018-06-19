@@ -102,6 +102,7 @@ class Runtime {
     template <typename T>
     void add_reset(BhArray<T>* view_ptr, size_t dim, size_t reset_max) {
         view_ptr->resets.insert({dim, reset_max});
+        view_ptr->changes_since_reset.insert({dim, 0});
 
             //        view_ptr->reset_dim.push_back(dim);
             //        view_ptr->reset_max.push_back(reset_max);

@@ -11,7 +11,7 @@ class iterator(object):
     Supports addition, subtraction and multiplication.
     '''
 
-    def __init__(self, value, step_delay=1, reset=[]):
+    def __init__(self, value, step_delay=1, reset=None):
         self.step = 1
         self.offset = value
         self.max_iter = 0
@@ -98,6 +98,10 @@ class dynamic_view_info(object):
 
         self.resets = rs
 
+        # testing
+        self.array = False
+
+
 
 def inherit_dynamic_changes(a, sliced):
     '''Create a view into a dynamic view, that keeps the same dynamic changes'''
@@ -126,7 +130,8 @@ def get_grid(*args):
     step_delay = 1
     for dim, iterations in enumerate(grid):
         i = get_iterator(max_iter, 0, step_delay)
-        i.reset.append((dim, iterations))
+#        i.reset.append((dim, iterations))
+        i.reset = iterations
         step_delay *= iterations
         iterators = iterators + (i,)
 
@@ -202,7 +207,14 @@ def slide_from_view(a, sliced):
     def check_bounds(shape, dim, s):
         '''Checks whether the view is within the bounds of the array,
         given the maximum number of iterations'''
-        last_index = s.offset + s.step * (s.max_iter-1)
+        step = s.step# / s.step_delay
+        print("steps: " + str(s.max_iter / s.step_delay))
+        print("steps delay: " + str(s.step_delay))
+        if s.reset and s.max_iter / s.step_delay >= s.reset:
+            last_index = s.offset + (s.reset-1) * s.step
+        else:
+            last_index = s.offset + s.step * ((s.max_iter-1) / s.step_delay)
+
         if -shape[dim] <= s.offset   < shape[dim] and \
            -shape[dim] <= last_index < shape[dim]:
             return True
@@ -279,6 +291,10 @@ def slide_from_view(a, sliced):
                 new_slices += (slice(start, stop, s.step),)
                 slides.append((i, step, get_shape(s), step_delay))
                 resets += reset
+                if s.reset:
+                    #resets += (i,reset)
+                    resets.append((i,s.reset))
+
 
             # A single iterator (eg. a[i])
             else:
@@ -292,7 +308,9 @@ def slide_from_view(a, sliced):
 #                if s.offset == -1:
 #                    new_slices += (slice(s.offset, None),)
                 slides.append((i, s.step, 0, s.step_delay))
-                resets += s.reset
+                if s.reset:
+                    #resets += (i,reset)
+                    resets.append((i,s.reset))
         else:
             # Does not contain an iterator, just pass it through
             new_slices += (s,)

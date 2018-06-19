@@ -1,6 +1,7 @@
 import bohrium as bh
 import exceptions
 from .bhary import fix_biclass_wrapper
+from .iterator import dynamic_view_info
 #from . import _bh
 
 def index(size=1):
@@ -67,13 +68,15 @@ def dynamic_get_item(a, indices):
                 stop = a.shape[dim]-1
 
             shape_array[dim:dim+1] += stop - start
-            new_indices = new_indices + (slice(int(start),int(stop)),)
+#            new_indices = new_indices + (slice(int(start),int(stop)),)
+            new_indices = new_indices + (slice(0,1),)
         else:
             shape_array[dim:dim+1] = 1
             if has_slice:
                 new_indices = new_indices + (idx,)
             else:
-                new_indices = new_indices + (slice(int(idx),int(idx)+1),)
+#                new_indices = new_indices + (slice(int(idx),int(idx)+1),)
+                new_indices = new_indices + (slice(0,1),)
 
     if len(new_indices) < a.ndim:
         for _ in range(a.ndim - len(new_indices)):
@@ -82,6 +85,11 @@ def dynamic_get_item(a, indices):
 #    b = a.copy()
 #    print(shape_array)
     b = a[new_indices]
+    dvi = dynamic_view_info([(0,0,0)],a.shape,a.strides)
+    dvi.array = True
+    b.bhc_dynamic_view_info = dvi
+    print("walla")
+#    b = a[new_indices]
 #    _bh.set_start(b, offset_array)
 #    _bh.set_shape(b, shape_array)
     return b

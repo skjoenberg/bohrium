@@ -55,6 +55,7 @@ void slide_views(BhIR *bhir) {
                         } else if (rel_idx >= max_rel_idx) {
                             change -= max_rel_idx;
                         }
+                        view.changes_since_reset[dim] += change;
 
                         view.start += (int64_t) change;
                         view.shape[dim] += (int64_t) view.slide_dim_shape_change.at(i);
@@ -65,7 +66,9 @@ void slide_views(BhIR *bhir) {
 
                             int64_t reset = search->second;
 
-                            view.start -= (int64_t) reset * change;
+                            view.start -= view.changes_since_reset[dim];
+                            view.changes_since_reset[dim] = 0;
+                            //                            view.start -= (int64_t) reset * change;
                             view.shape[dim] -= (int64_t) reset*view.slide_dim_shape_change.at(i);
                         }
                     }

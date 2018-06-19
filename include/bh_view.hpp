@@ -69,6 +69,7 @@ struct bh_view {
         slide_dim_step_delay_counter = view.slide_dim_step_delay_counter;
 
         resets = view.resets;
+        changes_since_reset = view.changes_since_reset;
 
         iteration_counter = view.iteration_counter;
 
@@ -122,6 +123,7 @@ struct bh_view {
 
     // The amount the iterator can reach, before resetting it
     std::unordered_map<int64_t, int64_t> resets;
+    std::unordered_map<int64_t, int64_t> changes_since_reset;
     //    std::vector<int64_t> reset_max;
 
     // The dimension to reset
