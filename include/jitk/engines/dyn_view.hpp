@@ -24,21 +24,17 @@ void slide_views(BhIR *bhir) {
         for (bh_view &view : instr.operand) {
             if (not view.slide.empty()) {
                 bool first_iter = view.iteration_counter == 0;
-                //                view.iteration_counter += 1;
+
                 // The relevant dimension in the view is updated by the given stride
                 for (size_t i = 0; i < view.slide.size(); i++) {
                     int dim = view.slide_dim.at(i);
+
                     int dim_stride = view.slide_dim_stride.at(i);
 
                     int dim_step_delay = view.slide_dim_step_delay.at(i);
 
-                    //                    printf("reset size: %d\n", view.resets.size());
-                    //                    printf("step delay: %d, counter: %d, modulus %d\n",dim_step_delay, view.iteration_counter, view.iteration_counter % dim_step_delay);
-                    //                    view.slide_dim_step_delay_counter[i] += 1;
                     int dim_step_delay_counter = view.slide_dim_step_delay.at(i);
-
                     if (dim_step_delay == 1 ||
-                        //                        (view.iteration_counter % dim_step_delay == 0 && !first_iter)) {
                         (view.iteration_counter % dim_step_delay == dim_step_delay-1)) {
                         int change = view.slide.at(i)*dim_stride;
 
@@ -62,13 +58,11 @@ void slide_views(BhIR *bhir) {
 
                         if (!first_iter && search != view.resets.end() &&
                             (view.iteration_counter / dim_step_delay) % search->second == search->second-1) {
-                            // Er ikke rigtigt lige nu. Ente gem changes i viewet eller rul dem tilbage i et loop
 
                             int64_t reset = search->second;
 
                             view.start -= view.changes_since_reset[dim];
                             view.changes_since_reset[dim] = 0;
-                            //                            view.start -= (int64_t) reset * change;
                             view.shape[dim] -= (int64_t) reset*view.slide_dim_shape_change.at(i);
                         }
                     }
@@ -190,12 +184,12 @@ void update_array_iterators(BhIR *execution_bhir) {
                     //                    printf("SHAPE %d: %d\n", i, view.shape[i]);
                 }
             }
-            if (not (view.stride_pointer == nullptr)) {
-                int64_t* strides = (int64_t*) view.stride_pointer->data;
-                for (int i=0; i < view.ndim; i++) {
-                    view.stride[i] = strides[i];
-                }
-            }
+            //            if (not (view.stride_pointer == nullptr)) {
+            //                int64_t* strides = (int64_t*) view.stride_pointer->data;
+            //                for (int i=0; i < view.ndim; i++) {
+            //                    view.stride[i] = strides[i];
+            //                }
+            // }
         }
     }
 }

@@ -29,19 +29,19 @@ void BhInstruction::appendOperand(bh_constant cnt) {
     constant = cnt;
 }
 
-void BhInstruction::appendOperand(BhBase& base) {
+void BhInstruction::appendOperand(BhBase &base) {
     if (opcode != BH_FREE) {
         throw std::runtime_error(
-              "BhBase objects can only be freed. Use a full BhArray if you want to "
-              "berform any other operation on it.");
+                "BhBase objects can only be freed. Use a full BhArray if you want to "
+                "perform any other operation on it.");
     }
 
     // Make a bh_view to this base
     bh_view view;
-    view.base      = &base;
-    view.start     = 0;
-    view.ndim      = 1;
-    view.shape[0]  = base.nelem;
+    view.base = &base;
+    view.start = 0;
+    view.ndim = 1;
+    view.shape[0] = base.nelem;
     view.stride[0] = 1;
     view.start_pointer = nullptr;
     view.shape_pointer = nullptr;
@@ -50,55 +50,29 @@ void BhInstruction::appendOperand(BhBase& base) {
     operand.push_back(view);
 }
 
-template <typename T>
-void BhInstruction::appendOperand(BhArray<T>& ary) {
+template<typename T>
+void BhInstruction::appendOperand(BhArray<T> &ary) {
     if (opcode == BH_FREE) {
         throw std::runtime_error(
-              "BH_FREE cannot be used as an instruction on arrays in the bhxx interface. "
-              "Use Runtime::instance().enqueue(BH_FREE,array) instead.");
+                "BH_FREE cannot be used as an instruction on arrays in the bhxx interface. "
+                "Use Runtime::instance().enqueue(BH_FREE,array) instead.");
     }
 
     // Forward to the const version below.
-    appendOperand(const_cast<const BhArray<T>&>(ary));
+    appendOperand(const_cast<const BhArray<T> &>(ary));
 }
 
-template <typename T>
-void BhInstruction::appendOperand(const BhArray<T>& ary) {
+template<typename T>
+void BhInstruction::appendOperand(const BhArray<T> &ary) {
     if (opcode == BH_FREE) {
         throw std::runtime_error(
-              "BH_FREE cannot be used as an instruction on arrays in the bhxx interface. "
-              "Use Runtime::instance().enqueue(BH_FREE,array) instead.");
+                "BH_FREE cannot be used as an instruction on arrays in the bhxx interface. "
+                "Use Runtime::instance().enqueue(BH_FREE,array) instead.");
     }
-
-    bh_view view;
-    assert(ary.base.use_count() > 0);
-    view.base  = ary.base.get();
-    view.start = static_cast<int64_t>(ary.offset);
-    view.ndim  = static_cast<int64_t>(ary.shape.size());
-    view.slide = ary.slide;
-
-    view.slide_dim = ary.slide_dim;
-    view.slide_dim_shape_change = ary.slide_dim_shape_change;
-    view.slide_dim_stride = ary.slide_dim_stride;
-    view.slide_dim_shape = ary.slide_dim_shape;
-
-    view.slide_dim_step_delay = ary.slide_dim_step_delay;
-
-    view.resets = ary.resets;
-    view.changes_since_reset = ary.changes_since_reset;
-
-    //    view.slide_dim_step_delay_counter = ary.slide_dim_step_delay_counter;
-
-    view.start_pointer = ary.start_pointer;
-    view.shape_pointer = ary.shape_pointer;
-    view.stride_pointer = ary.stride_pointer;
-
-    std::copy(ary.shape.begin(), ary.shape.end(), &view.shape[0]);
-    std::copy(ary.stride.begin(), ary.stride.end(), &view.stride[0]);
-    operand.push_back(view);
+    operand.push_back(ary.getBhView());
 }
 
-template <typename T>
+template<typename T>
 void BhInstruction::appendOperand(T scalar) {
     bh_view view;
     view.base = nullptr;
@@ -116,17 +90,29 @@ void BhInstruction::appendOperand(T scalar) {
     template void BhInstruction::appendOperand(BhArray<TYPE>&)
 
 INSTANTIATE(bool);
+
 INSTANTIATE(int8_t);
+
 INSTANTIATE(int16_t);
+
 INSTANTIATE(int32_t);
+
 INSTANTIATE(int64_t);
+
 INSTANTIATE(uint8_t);
+
 INSTANTIATE(uint16_t);
+
 INSTANTIATE(uint32_t);
+
 INSTANTIATE(uint64_t);
+
 INSTANTIATE(float);
+
 INSTANTIATE(double);
+
 INSTANTIATE(std::complex<float>);
+
 INSTANTIATE(std::complex<double>);
 
 #undef INSTANTIATE

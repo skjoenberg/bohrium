@@ -99,7 +99,7 @@ class dynamic_view_info(object):
         self.resets = rs
 
         # testing
-        self.array = False
+        #        self.array = False
 
 
 

@@ -42,44 +42,21 @@ constexpr int64_t BH_MAXDIM = 16;
 std::ostream &operator<<(std::ostream &out, const bh_base &b);
 
 struct bh_view {
-    bh_view() {
-        start_pointer = nullptr;
-        shape_pointer = nullptr;
-        stride_pointer = nullptr;
-    }
 
-    bh_view(const bh_view &view) {
-        base = view.base;
-        if (base == nullptr) {
-            return; //'view' is a constant thus the rest are garbage
-        }
+    // Start pointer
+    bh_base* start_pointer = nullptr;
+    // Shape pointer
+    bh_base* shape_pointer = nullptr;
+    // Stride pointer
+    bh_base* stride_pointer = nullptr;
 
-        start = view.start;
-        ndim = view.ndim;
-        assert(ndim < BH_MAXDIM);
-        assert(view.slide.size() == view.slide_dim_shape.size());
-        assert(view.slide_dim_stride.size() == view.slide_dim_shape.size());
+    bh_view() = default;
 
-        slide = view.slide;
-        slide_dim = view.slide_dim;
-        slide_dim_shape_change = view.slide_dim_shape_change;
-        slide_dim_stride = view.slide_dim_stride;
-        slide_dim_shape = view.slide_dim_shape;
-        slide_dim_step_delay = view.slide_dim_step_delay;
-        slide_dim_step_delay_counter = view.slide_dim_step_delay_counter;
+    /// Copy Constructor
+    bh_view(const bh_view &view);
 
-        resets = view.resets;
-        changes_since_reset = view.changes_since_reset;
-
-        iteration_counter = view.iteration_counter;
-
-        start_pointer = view.start_pointer;
-        shape_pointer = view.shape_pointer;
-        stride_pointer = view.stride_pointer;
-
-        std::memcpy(shape, view.shape, ndim * sizeof(int64_t));
-        std::memcpy(stride, view.stride, ndim * sizeof(int64_t));
-    }
+    /// Create a view that represents the whole of `base`
+    explicit bh_view(bh_base &base);
 
     /// Pointer to the base array.
     bh_base *base;
@@ -95,7 +72,6 @@ struct bh_view {
 
     /// The stride for each dimensions
     int64_t stride[BH_MAXDIM];
-
 
     // Information used for dynamic views within internal loops
 
@@ -131,16 +107,6 @@ struct bh_view {
 
     // The dimension to reset
     int64_t reset_counter = 0;
-
-
-    // Start pointer
-    bh_base* start_pointer = nullptr;
-
-    // Shape pointer
-    bh_base* shape_pointer = nullptr;
-
-    // Stride pointer
-    bh_base* stride_pointer = nullptr;
 
     // Returns a vector of tuples that describe the view using (almost)
     // Python Notation.
@@ -218,8 +184,12 @@ struct bh_view {
                 ar << stride[i];
             }
             ar << slide;
+            ar << slide_dim;
             ar << slide_dim_stride;
             ar << slide_dim_shape;
+            ar << start_pointer;
+            ar << shape_pointer;
+            ar << stride_pointer;
         }
     }
 
@@ -236,8 +206,12 @@ struct bh_view {
                 ar >> stride[i];
             }
             ar >> slide;
+            ar >> slide_dim;
             ar >> slide_dim_stride;
             ar >> slide_dim_shape;
+            ar >> start_pointer;
+            ar >> shape_pointer;
+            ar >> stride_pointer;
         }
     }
 

@@ -23,6 +23,7 @@ If not, see <http://www.gnu.org/licenses/>.
 #include <bh_main_memory.hpp>
 
 #include "comm.hpp"
+#include "compression.hpp"
 
 using namespace std;
 using namespace bohrium;
@@ -32,7 +33,14 @@ static void service(const std::string &address, int port) {
     CommBackend comm_backend(address, port);
     unique_ptr<ConfigParser> config;
     unique_ptr<ComponentFace> child;
+    Compression compression;
+    string compress_param;
     std::map<const bh_base *, bh_base> remote2local;
+
+    // Some statistics
+    std::chrono::duration<double> time_mem_copy_total{0};
+    std::chrono::duration<double> time_mem_copy_zip{0};
+    uint64_t nbytes_send{0};
 
     while (true) {
         // Let's read the head of the message
@@ -50,9 +58,16 @@ static void service(const std::string &address, int port) {
                 }
                 config.reset(new ConfigParser(body.stack_level));
                 child.reset(new ComponentFace(config->getChildLibraryPath(), config->stack_level + 1));
+                compress_param = config->defaultGet<string>("compress_param", "zlib");
                 break;
             }
             case msg::Type::SHUTDOWN: {
+                if (config->defaultGet("prof", false)) {
+                    cout << "Backend:\n";
+                    cout << "  MemCopy: " << time_mem_copy_total.count() << "s" << endl;
+                    cout << "    Zip:   " << time_mem_copy_zip.count() << "s" << endl;
+                    cout << "    Send:  " << nbytes_send / 1024.0 / 1024.0 << "MB" << endl;
+                }
                 return;
             }
             case msg::Type::EXEC: {
@@ -65,7 +80,11 @@ static void service(const std::string &address, int port) {
                 // Receive new base array data
                 for (bh_base *base: data_recv) {
                     base->data = nullptr;
-                    comm_backend.recv_array_data(base);
+                    auto data = comm_backend.recv_data();
+                    if (not data.empty()) {
+                        bh_data_malloc(base);
+                        compression.uncompress(data, *base, compress_param);
+                    }
                 }
 
                 // Send the bhir down to the child
@@ -85,14 +104,47 @@ static void service(const std::string &address, int port) {
 
                 if (util::exist(remote2local, body.base)) {
                     bh_base &local_base = remote2local.at(body.base);
-                    void *data = child->getMemoryPointer(local_base, true, false, body.nullify);
-                    comm_backend.send_array_data(data, local_base.nbytes());
+                    child->getMemoryPointer(local_base, true, false, false); // Note, we delay nullify to after comm.
+                    if (local_base.data != nullptr) {
+                        auto data = compression.compress(local_base, compress_param);
+                        comm_backend.send_data(data);
+                    } else {
+                        comm_backend.send_data({});
+                    }
+                    if (body.nullify) {
+                        bh_data_free(&local_base);
+                        local_base.data = nullptr;
+                    }
                 } else {
-                    comm_backend.send_array_data(nullptr, 0);
+                    comm_backend.send_data({});
                 }
                 if (body.nullify) {
                     remote2local.erase(body.base);
                 }
+                break;
+            }
+            case msg::Type::MEM_COPY: {
+                auto t1 = chrono::steady_clock::now();
+                std::vector<char> buffer(head.body_size);
+                comm_backend.read(buffer);
+                msg::MemCopy body(buffer);
+                if (util::exist(remote2local, body.src.base)) {
+                    bh_view src = body.src;
+                    src.base = &remote2local.at(body.src.base);
+                    child->getMemoryPointer(*src.base, true, false, false);
+                    if (src.base->data != nullptr) {
+                        auto t2 = chrono::steady_clock::now();
+                        auto data = compression.compress(src, body.param);
+                        time_mem_copy_zip += chrono::steady_clock::now() - t2;
+                        nbytes_send += data.size();
+                        comm_backend.send_data(data);
+                    } else {
+                        comm_backend.send_data({});
+                    }
+                } else {
+                    comm_backend.send_data({});
+                }
+                time_mem_copy_total += chrono::steady_clock::now() - t1;
                 break;
             }
             case msg::Type::MSG: {

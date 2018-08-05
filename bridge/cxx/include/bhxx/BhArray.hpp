@@ -86,25 +86,22 @@ class BhArray {
     // The dimension to reset
     std::vector<int64_t> reset_dim;
 
-
     // Start pointer
-    bh_base* start_pointer;
-
+    bh_base* start_pointer = nullptr;
     // Shape pointer
-    bh_base* shape_pointer;
-
+    bh_base* shape_pointer = nullptr;
     // Stride pointer
-    bh_base* stride_pointer;
+    bh_base* stride_pointer = nullptr;
 
     /** Create a new view */
     BhArray(Shape shape_, Stride stride_, const size_t offset_ = 0)
           : offset(offset_),
             shape(shape_),
             stride(std::move(stride_)),
-            base(make_base_ptr(T(0), shape_.prod())),
-            start_pointer(nullptr),
-            shape_pointer(nullptr),
-            stride_pointer(nullptr) {
+            base(make_base_ptr(T(0), shape_.prod())) {
+        //            start_pointer(nullptr),
+            //            shape_pointer(nullptr),
+            //stride_pointer(nullptr) {
         assert(shape.size() == stride.size());
         assert(shape.prod() > 0);
     }
@@ -125,10 +122,10 @@ class BhArray {
           : offset(offset_),
             shape(std::move(shape_)),
             stride(std::move(stride_)),
-            base(std::move(base_)),
-            start_pointer(nullptr),
-            shape_pointer(nullptr),
-            stride_pointer(nullptr) {
+            base(std::move(base_)) {
+            //            start_pointer(nullptr),
+            //            shape_pointer(nullptr),
+            //            stride_pointer(nullptr) {
         assert(shape.size() == stride.size());
         assert(shape.prod() > 0);
     }
@@ -186,6 +183,33 @@ class BhArray {
     //
     // Routines
     //
+
+    /** Return a `bh_view` of the array */
+    bh_view getBhView() const {
+        bh_view view;
+        assert(base.use_count() > 0);
+        view.base  = base.get();
+        view.start = static_cast<int64_t>(offset);
+        view.ndim  = static_cast<int64_t>(shape.size());
+
+        view.slide = slide;
+        view.slide_dim = slide_dim;
+        view.slide_dim_stride = slide_dim_stride;
+        view.slide_dim_shape = slide_dim_shape;
+        view.slide_dim_shape_change = slide_dim_shape_change;
+
+        view.slide_dim_step_delay = slide_dim_step_delay;
+        view.resets = resets;
+        view.changes_since_reset = changes_since_reset;
+
+        view.start_pointer = start_pointer;
+        view.shape_pointer = shape_pointer;
+        view.stride_pointer = stride_pointer;
+
+        std::copy(shape.begin(), shape.end(), &view.shape[0]);
+        std::copy(stride.begin(), stride.end(), &view.stride[0]);
+        return view;
+    }
 
     // Pretty printing the content of the array
     // TODO: for now it always print the flatten array

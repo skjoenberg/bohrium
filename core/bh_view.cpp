@@ -31,6 +31,46 @@ If not, see <http://www.gnu.org/licenses/>.
 
 using namespace std;
 
+bh_view::bh_view(const bh_view &view) {
+    base = view.base;
+    if (base == nullptr) {
+        return; //'view' is a constant thus the rest are garbage
+    }
+
+    start = view.start;
+    ndim = view.ndim;
+    assert(ndim < BH_MAXDIM);
+    assert(view.slide.size() == view.slide_dim_shape.size());
+    assert(view.slide_dim_stride.size() == view.slide_dim_shape.size());
+
+    slide = view.slide;
+    slide_dim = view.slide_dim;
+    slide_dim_stride = view.slide_dim_stride;
+    slide_dim_shape = view.slide_dim_shape;
+    slide_dim_shape_change = view.slide_dim_shape_change;
+
+    slide_dim_step_delay = view.slide_dim_step_delay;
+    resets = view.resets;
+    changes_since_reset = view.changes_since_reset;
+
+    reset_counter = view.reset_counter;
+    iteration_counter = view.iteration_counter;
+
+    start_pointer = view.start_pointer;
+    shape_pointer = view.shape_pointer;
+    stride_pointer = view.stride_pointer;
+
+    std::memcpy(shape, view.shape, ndim * sizeof(int64_t));
+    std::memcpy(stride, view.stride, ndim * sizeof(int64_t));
+}
+
+bh_view::bh_view(bh_base &base) {
+    bh_assign_complete_base(this, &base);
+    this->start_pointer = nullptr;
+    this->shape_pointer = nullptr;
+    this->stride_pointer = nullptr;
+}
+
 void bh_view::insert_axis(int64_t dim, int64_t size, int64_t stride) {
     assert(dim <= ndim);
 
@@ -314,6 +354,9 @@ void bh_assign_complete_base(bh_view *view, bh_base *base) {
     view->start = 0;
     view->shape[0] = view->base->nelem;
     view->stride[0] = 1;
+    view->start_pointer = nullptr;
+    view->shape_pointer = nullptr;
+    view->stride_pointer = nullptr;
 }
 
 bool bh_is_scalar(const bh_view *view) {
