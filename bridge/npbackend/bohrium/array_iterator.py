@@ -76,3 +76,12 @@ def dynamic_get_item(a, indices):
     _bh.set_start(b, offset_array)
     _bh.set_shape(b, shape_array)
     return b
+
+def set_start(a, offset_array):
+    _bh.set_start(a, offset_array)
+
+def set_shape(a, shape_array):
+    _bh.set_shape(a, shape_array)
+
+def set_stride(a, stride_array):
+    _bh.set_stride(a, stride_array)
