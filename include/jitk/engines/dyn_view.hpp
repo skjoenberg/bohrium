@@ -184,12 +184,12 @@ void update_array_iterators(BhIR *execution_bhir) {
                     //                    printf("SHAPE %d: %d\n", i, view.shape[i]);
                 }
             }
-            //            if (not (view.stride_pointer == nullptr)) {
-            //                int64_t* strides = (int64_t*) view.stride_pointer->data;
-            //                for (int i=0; i < view.ndim; i++) {
-            //                    view.stride[i] = strides[i];
-            //                }
-            // }
+            if (not (view.stride_pointer == nullptr)) {
+                int64_t* strides = (int64_t*) view.stride_pointer->data;
+                for (int i=0; i < view.ndim; i++) {
+                    view.stride[i] = strides[i];
+                }
+            }
         }
     }
 }
